@@ -9,7 +9,7 @@ import { createUserProfile } from './db.js';
 
 const provider = new GoogleAuthProvider();
 
-export const loginWithGoogle = async () => {
+export const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, provider);
     const user = result.user;

@@ -1,5 +1,5 @@
 import { db } from './config.js';
-import { doc, setDoc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, onSnapshot } from "firebase/firestore";
 
 // Users 컬렉션
 export const createUserProfile = async (user) => {
@@ -51,10 +51,10 @@ export const getDefaultProject = async (userId) => {
 };
 
 // Characters: 캐릭터 저장
-export const saveCharacter = async (projectId, characterData) => {
+export const saveCharacter = async (characterData, userId) => {
   try {
     const docRef = await addDoc(collection(db, "characters"), {
-      projectId,
+      userId,
       ...characterData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -64,4 +64,19 @@ export const saveCharacter = async (projectId, characterData) => {
     console.error("캐릭터 저장 실패: ", e);
     throw e;
   }
+};
+
+// Characters: 본인 캐릭터 실시간 구독
+export const subscribeToCharacters = (userId, callback) => {
+  const q = query(
+    collection(db, "characters"),
+    where("userId", "==", userId)
+  );
+  return onSnapshot(q, (snapshot) => {
+    const characters = [];
+    snapshot.forEach((doc) => {
+      characters.push({ id: doc.id, ...doc.data() });
+    });
+    callback(characters);
+  });
 };

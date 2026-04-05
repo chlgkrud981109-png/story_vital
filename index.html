@@ -118,10 +118,9 @@
         </div>
         <span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-white transition-colors">notifications</span>
         
-        <!-- Auth Container -->
         <div id="auth-container">
             <button id="login-btn" type="button" class="bg-primary-dim text-white font-bold py-1.5 px-4 rounded-lg text-sm transition-colors cursor-pointer hover:bg-primary active:scale-95">
-                Login with Google
+                구글로 시작하기
             </button>
         </div>
     </div>
@@ -145,17 +144,14 @@
 </aside>
 
 <main class="ml-64 mt-16 p-8 h-[calc(100vh-64px)] grid grid-cols-12 gap-8 overflow-hidden">
-    <!-- Left Column (Hidden for brevity, preserved structure visually but empty for now since we focus on Form) -->
+    <!-- Left Column: Character List -->
     <section class="col-span-3 h-full flex flex-col gap-6">
         <div class="flex items-center justify-between">
-            <h3 class="font-headline font-bold text-white tracking-tight">Timeline</h3>
-            <span class="text-xs text-primary bg-primary-dim/10 px-2 py-0.5 rounded-full">Chapter 14</span>
+            <h3 class="font-headline font-bold text-white tracking-tight">Characters</h3>
+            <span id="character-count-badge" class="text-xs text-primary bg-primary-dim/10 px-2 py-0.5 rounded-full">0</span>
         </div>
-        <div class="flex-1 overflow-y-auto pr-2 space-y-8 relative">
-            <div class="relative pl-10 bg-surface-container-high/40 p-4 rounded-xl -ml-2 border-l-2 border-primary-dim">
-                <p class="text-[10px] uppercase tracking-widest text-tertiary font-bold mb-1">Chapter Finale</p>
-                <h4 class="text-sm font-semibold text-white mb-1">The Great Betrayal</h4>
-            </div>
+        <div id="character-list-container" class="flex-1 overflow-y-auto pr-2 space-y-4">
+            <!-- characters will be injected here -->
         </div>
     </section>
 
