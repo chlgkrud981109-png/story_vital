@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Archive - The Scriptorium</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased overflow-hidden h-screen text-on-surface">
+
+<header class="fixed top-0 right-0 left-0 h-16 bg-surface flex items-center justify-between px-6 w-full z-40 font-headline antialiased">
+    <div class="flex items-center gap-8">
+        <span class="text-xl font-bold tracking-tight text-white">The Scriptorium</span>
+        <nav class="hidden md:flex gap-6 items-center">
+            <span class="text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-95 text-sm">Dashboard</span>
+            <a href="/" class="text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-95 text-sm">Manuscripts</a>
+            <span class="text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-95 text-sm">Library</span>
+        </nav>
+    </div>
+    <div id="auth-container" class="flex items-center gap-4"></div>
+</header>
+
+<main class="ml-0 md:ml-0 p-8 mt-16 max-w-6xl mx-auto h-[calc(100vh-64px)] flex flex-col gap-8">
+    <div class="flex flex-col md:flex-row items-start md:items-end justify-between border-b border-surface-bright/20 pb-6 gap-4">
+        <div>
+            <h1 class="text-3xl md:text-4xl font-headline font-black text-white mb-2 tracking-tighter">Forgotten Shadows</h1>
+            <p class="text-sm text-on-surface-variant leading-relaxed">Archived characters waiting for a second soul to re-animate them.</p>
+        </div>
+        <a href="/" class="flex flex-shrink-0 items-center gap-2 text-xs font-bold text-primary hover:text-white transition-colors px-5 py-2.5 bg-primary/10 rounded-full border border-primary/20 hover:bg-primary/20 shadow-lg">
+            <span class="material-symbols-outlined text-[16px]">arrow_back</span> Back to Manuscript
+        </a>
+    </div>
+
+    <div id="archived-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto pr-2 custom-scroll pb-12 flex-1">
+        <!-- Archived characters will be injected here -->
+        <p class="col-span-full text-center text-on-surface-variant/40 italic py-24">The archive is currently empty...</p>
+    </div>
+</main>
+
+<script type="module" src="/src/archive.js"></script>
+</body>
+</html>
