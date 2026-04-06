@@ -4,33 +4,40 @@
 @layer base {
   body {
     @apply bg-surface font-body text-on-surface antialiased overflow-hidden h-screen;
-    background-color: #0e0e11; /* surface */
+    background-color: #0e0e11;
   }
 }
 
 @layer components {
+  /* Glass morphism panel */
   .glass-panel {
-    background: rgba(25, 25, 29, 0.7);
+    background: rgba(25, 25, 29, 0.75);
     backdrop-filter: blur(24px);
-    /* DESIGN.md: Ghost Border - 1px primary_dim at 15% opacity */
     border: 1px solid rgba(126, 81, 255, 0.15);
   }
 
+  /* Dark recessed input */
   .recessed-input {
-    background-color: #000000; /* surface_container_lowest */
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
-    @apply border-none rounded-lg focus:ring-1 focus:ring-primary transition-all;
+    background-color: #000000;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    @apply border-none rounded-lg focus:ring-1 focus:ring-primary transition-all outline-none;
   }
 
+  /* Ambient glow shadow */
   .ambient-shadow {
-    /* DESIGN.md Section 4: Ambient Shadows */
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 15px rgba(182, 160, 255, 0.05);
   }
 
+  /* Timeline vertical dashed line */
   .timeline-line {
-    background: repeating-linear-gradient(to bottom, transparent, transparent 4px, rgba(118, 117, 121, 0.3) 4px, rgba(118, 117, 121, 0.3) 8px);
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent, transparent 4px,
+      rgba(118, 117, 121, 0.3) 4px, rgba(118, 117, 121, 0.3) 8px
+    );
   }
 
+  /* Pomodoro finish neon pulse */
   .neon-pulse {
     animation: neon-pulse-animation 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
@@ -46,25 +53,67 @@
     }
   }
 
+  /* Active pomodoro timer ring */
   .timer-active {
-    @apply border-primary text-primary transition-all scale-105;
-    box-shadow: 0 0 15px rgba(126, 81, 255, 0.3);
+    @apply border border-primary text-primary transition-all;
+    box-shadow: 0 0 12px rgba(126, 81, 255, 0.35);
   }
+
+  /* Protagonist node glow */
+  .map-node-protagonist {
+    filter: drop-shadow(0 0 18px rgba(126, 81, 255, 0.7));
+    border: 2px solid rgba(126, 81, 255, 0.6);
+  }
+
+  /* Scrollbar utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  /* Custom thin scrollbar */
+  .custom-scroll::-webkit-scrollbar { width: 4px; }
+  .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+  .custom-scroll::-webkit-scrollbar-thumb { background: #2c2c30; border-radius: 10px; }
+
+  /* Spin animation for save button */
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  .animate-spin { animation: spin 0.8s linear infinite; }
 }
 
-/* Custom Scrollbar */
+/* Global scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: #0e0e11; }
 ::-webkit-scrollbar-thumb { background: #2c2c30; border-radius: 10px; }
 
+/* Material Symbols baseline fix */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   display: inline-block;
   line-height: 1;
 }
 
-.map-node-protagonist {
-  filter: drop-shadow(0 0 15px rgba(126, 81, 255, 0.6));
-  z-index: 50;
+/* Animate-in utilities (Tailwind v4 compatibility shim) */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
-
+@keyframes slideInFromLeft {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes zoomIn95 {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-in { animation-fill-mode: both; }
+.fade-in    { animation-name: fadeIn; }
+.zoom-in-95 { animation-name: zoomIn95; }
+.slide-in-from-left-4 { animation-name: slideInFromLeft; }
+.duration-200 { animation-duration: 200ms; }
+.duration-300 { animation-duration: 300ms; }
+.duration-500 { animation-duration: 500ms; }

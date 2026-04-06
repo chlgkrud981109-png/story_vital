@@ -1,25 +1,31 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html class="dark" lang="ko">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>The Scriptorium - Character Management</title>
+    <title>StoryVital – 웹소설 작가의 워크스페이스</title>
+    <meta name="description" content="웹소설 캐릭터 DB, 타임라인, 인물 관계도를 한 곳에서 관리하는 작가 전용 SaaS."/>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 </head>
 <body class="bg-surface font-body text-on-surface antialiased overflow-hidden h-screen">
 
-<header class="fixed top-0 right-0 left-0 h-16 bg-surface flex items-center justify-between px-6 w-full z-40 font-headline antialiased">
+<!-- ===================== HEADER ===================== -->
+<header class="fixed top-0 right-0 left-0 h-16 bg-surface/80 backdrop-blur-xl flex items-center justify-between px-6 w-full z-40 font-headline antialiased border-b border-surface-bright/10">
     <div class="flex items-center gap-8">
-        <span class="text-xl font-bold tracking-tight text-white">The Scriptorium</span>
+        <div class="flex items-center gap-2">
+            <span class="text-primary material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1">auto_stories</span>
+            <span class="text-xl font-bold tracking-tight text-white">StoryVital</span>
+        </div>
         <nav class="hidden md:flex gap-6 items-center">
-            <span class="text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-95 text-sm">Dashboard</span>
-            <span class="text-primary font-bold cursor-pointer active:scale-95 text-sm underline underline-offset-8 decoration-2">Manuscripts</span>
-            <span class="text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-95 text-sm">Library</span>
+            <span class="text-gray-400 hover:text-white transition-colors cursor-pointer text-sm">Dashboard</span>
+            <span class="text-primary font-bold cursor-pointer text-sm underline underline-offset-8 decoration-2">Characters</span>
+            <span class="text-gray-400 hover:text-white transition-colors cursor-pointer text-sm">Library</span>
         </nav>
     </div>
     <div class="flex items-center gap-4">
+        <!-- Pomodoro Timer -->
         <div id="pomodoro-timer" class="flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-full text-xs text-on-surface-variant cursor-pointer hover:bg-surface-bright transition-all group select-none relative">
             <span class="material-symbols-outlined text-[16px] group-hover:text-primary transition-colors">timer</span>
             <span id="timer-display">25:00</span>
@@ -29,7 +35,6 @@
             </button>
         </div>
         <span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-white transition-colors">notifications</span>
-        
         <div id="auth-container">
             <button id="login-btn" type="button" class="bg-primary-dim text-white font-bold py-1.5 px-4 rounded-lg text-sm transition-colors cursor-pointer hover:bg-primary active:scale-95">
                 구글로 시작하기
@@ -38,45 +43,52 @@
     </div>
 </header>
 
+<!-- ===================== SIDEBAR ===================== -->
 <aside class="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-low flex flex-col py-8 z-30 shadow-[20px_0_50px_rgba(0,0,0,0.5)] font-headline text-sm tracking-wide">
     <div class="px-6 mb-8">
         <h2 class="text-white font-black text-lg">Manuscript Alpha</h2>
-        <p class="text-gray-500 text-xs" id="current-project-desc">Drafting Phase</p>
+        <p class="text-gray-500 text-xs">Drafting Phase</p>
     </div>
     <div class="flex flex-col gap-1">
         <a class="flex items-center gap-4 px-6 py-3 text-gray-400 hover:text-white hover:bg-surface-container-high transition-all hover:translate-x-1 duration-200 rounded-r-full mr-4" href="#">
-            <span class="material-symbols-outlined">auto_stories</span>
-            <span>Chapters</span>
+            <span class="material-symbols-outlined">auto_stories</span><span>Chapters</span>
         </a>
         <a class="flex items-center gap-4 px-6 py-3 bg-surface-container-highest text-white border-l-4 border-secondary hover:translate-x-1 transition-all duration-200 rounded-r-full mr-4" href="#">
-            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">group</span>
-            <span>Characters</span>
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">group</span><span>Characters</span>
         </a>
         <a class="flex items-center gap-4 px-6 py-3 text-gray-400 hover:text-white hover:bg-surface-container-high transition-all hover:translate-x-1 duration-200 rounded-r-full mr-4" href="/archive.html">
-            <span class="material-symbols-outlined">archive</span>
-            <span>Archive</span>
+            <span class="material-symbols-outlined">archive</span><span>Archive</span>
         </a>
     </div>
     <div class="mt-auto flex flex-col gap-1">
         <a class="flex items-center gap-4 px-6 py-3 text-gray-500 hover:text-white transition-colors" href="#">
-            <span class="material-symbols-outlined">settings</span>
-            <span>Settings</span>
+            <span class="material-symbols-outlined">settings</span><span>Settings</span>
         </a>
         <a class="flex items-center gap-4 px-6 py-3 text-gray-500 hover:text-white transition-colors" href="#">
-            <span class="material-symbols-outlined">help</span>
-            <span>Help</span>
+            <span class="material-symbols-outlined">help</span><span>Help</span>
         </a>
     </div>
 </aside>
 
+<!-- ===================== MAIN LAYOUT ===================== -->
 <main class="ml-64 mt-16 p-8 h-[calc(100vh-64px)] flex flex-row gap-8 overflow-hidden font-inter">
-    <!-- Left Column: Timeline -->
-    <section class="w-72 flex-shrink-0 h-full flex flex-col gap-6">
+
+    <!-- ===== LEFT: Timeline ===== -->
+    <section class="w-72 flex-shrink-0 h-full flex flex-col gap-4">
         <div class="flex items-center justify-between shrink-0">
             <h3 class="font-headline font-bold text-white tracking-tight">Timeline</h3>
-            <span class="text-[10px] uppercase tracking-widest text-primary bg-primary-dim/10 px-2 py-1 rounded-full font-bold">Chapter 14</span>
+            <span id="timeline-filter-badge" class="hidden text-[10px] uppercase tracking-widest text-secondary bg-secondary/10 px-2 py-1 rounded-full font-bold">Filtered</span>
+            <span class="text-[10px] uppercase tracking-widest text-primary bg-primary/10 px-2 py-1 rounded-full font-bold">Chapter 14</span>
         </div>
-        <div class="flex-1 overflow-y-auto pr-4 space-y-10 relative scrollbar-hide mb-4" id="timeline-container">
+
+        <!-- Filter reset hint -->
+        <div id="filter-hint" class="hidden shrink-0">
+            <button id="clear-filter-btn" class="w-full py-2 bg-secondary/10 text-secondary text-[10px] font-bold rounded-lg border border-secondary/20 hover:bg-secondary/20 transition-all flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-sm">filter_alt_off</span> 맵 필터 해제
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto pr-2 space-y-6 relative scrollbar-hide" id="timeline-container">
             <div class="absolute left-[7px] top-0 bottom-0 w-0.5 timeline-line opacity-20"></div>
             <!-- Dynamic Timeline Events -->
         </div>
@@ -86,33 +98,54 @@
         </button>
     </section>
 
-    <!-- Center Column: Character Forge -->
+    <!-- ===== CENTER: Character Forge ===== -->
     <section class="flex-1 min-w-0 h-full overflow-y-auto pr-2 custom-scroll">
-        <div class="glass-panel p-8 rounded-2xl ambient-shadow space-y-8">
-            <div class="flex items-start justify-between">
-                <div>
-                    <h1 class="text-4xl font-headline font-black text-white mb-2 tracking-tighter">Character Forge</h1>
-                    <p class="text-sm text-on-surface-variant leading-relaxed">Sculpting the essence of your protagonist from ink and soul.</p>
+        <div class="glass-panel p-8 rounded-2xl ambient-shadow space-y-6" id="form-wrapper">
+
+            <!-- Form Header: Mode indicator + New Character btn -->
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                        <h1 class="text-4xl font-headline font-black text-white tracking-tighter">Character Forge</h1>
+                        <!-- Mode Badge -->
+                        <span id="mode-badge" class="text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-widest bg-primary/15 text-primary border border-primary/20 transition-all">
+                            Create
+                        </span>
+                    </div>
+                    <p class="text-sm text-on-surface-variant leading-relaxed">인물의 본질을 잉크와 영혼으로 빚어내는 공간.</p>
                 </div>
-                <div class="group relative">
-                    <div class="w-24 h-24 rounded-full bg-black flex items-center justify-center overflow-hidden border-2 border-surface-bright shadow-2xl relative">
-                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200" alt="Avatar Mockup" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">
+                <!-- New Character Button -->
+                <button type="button" id="new-char-btn" class="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 bg-surface-container-high hover:bg-surface-bright border border-outline-variant/20 hover:border-primary/30 text-on-surface-variant hover:text-white text-xs font-bold rounded-xl transition-all active:scale-95 group">
+                    <span class="material-symbols-outlined text-sm group-hover:text-primary transition-colors">person_add</span>
+                    New Character
+                </button>
+            </div>
+
+            <!-- Avatar -->
+            <div class="flex items-center gap-6">
+                <div class="group relative flex-shrink-0">
+                    <div class="w-20 h-20 rounded-full bg-black flex items-center justify-center overflow-hidden border-2 border-surface-bright shadow-2xl relative">
+                        <img id="avatar-preview" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200" alt="Character Avatar" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">
                         <div class="absolute inset-0 bg-primary-dim/20 mix-blend-overlay"></div>
                     </div>
-                    <button type="button" aria-label="Edit Avatar" class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary-dim text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform">
-                        <span class="material-symbols-outlined text-sm">edit</span>
+                    <button type="button" aria-label="Change Avatar" class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary-dim text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform">
+                        <span class="material-symbols-outlined text-xs">shuffle</span>
                     </button>
+                </div>
+                <div class="flex-1 text-xs text-on-surface-variant/60 italic leading-relaxed">
+                    저장 시 자동으로 아바타가 배정됩니다. 셔플로 미리보기할 수 있습니다.
                 </div>
             </div>
 
             <form class="space-y-6" id="character-form">
-                <!-- Protagonist Toggle Section -->
-                <div class="flex items-center justify-between p-4 bg-primary-dim/5 rounded-xl border border-primary/10 mb-6">
+
+                <!-- ① Protagonist Toggle — TOPMOST -->
+                <div class="flex items-center justify-between p-4 bg-primary-dim/5 rounded-xl border border-primary/10">
                     <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-primary">verified_user</span>
+                        <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1">stars</span>
                         <div>
-                            <p class="text-xs font-bold text-white tracking-wide">Set as Protagonist</p>
-                            <p class="text-[10px] text-on-surface-variant">Highlighted in list and relationship map</p>
+                            <p class="text-xs font-bold text-white tracking-wide">주인공으로 설정</p>
+                            <p class="text-[10px] text-on-surface-variant">관계도 중앙에 크게 배치됩니다</p>
                         </div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
@@ -121,93 +154,92 @@
                     </label>
                 </div>
 
+                <!-- ② Basic Info Grid -->
                 <div class="grid grid-cols-2 gap-6">
                     <div class="space-y-2">
                         <label for="char-fullname" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Full Name</label>
-                        <input id="char-fullname" class="w-full h-12 recessed-input px-4 text-white font-medium" type="text" placeholder="e.g. Kaelen Vos"/>
+                        <input id="char-fullname" class="w-full h-12 recessed-input px-4 text-white font-medium" type="text" placeholder="예) 이건우, Kaelen Vos"/>
                     </div>
-                    <div class="space-y-2 relative">
+                    <div class="space-y-2">
+                        <!-- ③ Archetype: select → free text input -->
                         <label for="char-archetype" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Archetype</label>
-                        <div class="relative">
-                            <select id="char-archetype" class="w-full h-12 recessed-input px-4 text-white appearance-none cursor-pointer">
-                                <option value="Protagonist">Protagonist</option>
-                                <option value="Antagonist">Antagonist</option>
-                                <option value="Mentor">Mentor</option>
-                                <option value="The Shadow">The Shadow</option>
-                                <option value="The Innocent">The Innocent</option>
-                                <option value="The Ruler">The Ruler</option>
-                                <option value="The Outlaw">The Outlaw</option>
-                                <option value="The Explorer">The Explorer</option>
-                            </select>
-                            <span class="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant pointer-events-none">expand_more</span>
-                        </div>
+                        <input id="char-archetype" class="w-full h-12 recessed-input px-4 text-white font-medium" type="text" placeholder="예) 냉혹한 빌런, 반전 있는 조력자…"/>
                     </div>
                 </div>
 
+                <!-- ④ Key Traits -->
                 <div class="space-y-2">
                     <label for="char-trait-input" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Key Traits &amp; Talents</label>
-                    <div id="char-traits-container" class="flex flex-wrap gap-2 mb-3">
-                        <!-- Traits tags injected -->
-                    </div>
-                    <input id="char-trait-input" class="w-full h-12 recessed-input px-4 text-white text-sm" placeholder="Add new trait (Press Enter)..." type="text"/>
+                    <div id="char-traits-container" class="flex flex-wrap gap-2 mb-2 min-h-[28px]"></div>
+                    <input id="char-trait-input" class="w-full h-12 recessed-input px-4 text-white text-sm" placeholder="특성 입력 후 Enter..." type="text"/>
                 </div>
 
-                <!-- NEW: Relationships Section -->
-                <div class="space-y-4 pt-4 border-t border-surface-bright/20">
+                <!-- ⑤ Inner World -->
+                <div class="space-y-2">
+                    <label for="char-personality" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Inner World (Personality)</label>
+                    <textarea id="char-personality" class="w-full recessed-input p-4 text-white text-sm leading-relaxed min-h-[100px]" placeholder="내면 세계를 자유롭게 묘사하세요..."></textarea>
+                </div>
+
+                <!-- ⑥ Related Characters (통합: 관련 인물 + 주인공과의 관계) -->
+                <div class="space-y-3 pt-4 border-t border-surface-bright/20">
                     <div class="flex items-center justify-between">
-                        <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Personal Relationships</label>
-                        <button type="button" id="add-relationship-btn" class="text-[10px] bg-surface-container-high hover:bg-surface-bright text-primary px-3 py-1.5 rounded-lg border border-primary/20 transition-colors flex items-center gap-2">
+                        <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Related Characters</label>
+                        <button type="button" id="add-relationship-btn" class="text-[10px] bg-surface-container-high hover:bg-surface-bright text-primary px-3 py-1.5 rounded-lg border border-primary/20 transition-colors flex items-center gap-1.5">
                             <span class="material-symbols-outlined text-[14px]">add</span> Add Row
                         </button>
                     </div>
                     <div id="relationships-container" class="space-y-3">
-                        <!-- Relationship rows (Target Select + Description) injected -->
+                        <!-- Rows: [Character Select] | [Relation to Protagonist] | [Delete] -->
                     </div>
-                </div>
-                <div class="space-y-2">
-                    <label for="char-personality" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Inner World (Personality)</label>
-                    <textarea id="char-personality" class="w-full recessed-input p-4 text-white text-sm leading-relaxed min-h-[120px]" placeholder="Describe their inner world..."></textarea>
+                    <p id="rel-empty-hint" class="text-[10px] italic text-on-surface-variant/40 text-center py-2">+ 버튼으로 관련 인물을 추가하세요</p>
                 </div>
 
-                <!-- Dynamic: Relationship to Protagonist (Hidden when is protagonist) -->
-                <div id="rel-to-protagonist-container" class="space-y-2 animate-in fade-in duration-500">
-                    <label for="char-rel-to-proto" class="text-[10px] font-bold text-secondary uppercase tracking-widest ml-1">Relationship to Protagonist</label>
-                    <input id="char-rel-to-proto" type="text" class="w-full h-12 recessed-input px-4 text-white text-sm border-l-4 border-secondary/40" placeholder="e.g. Secret Ally / Arch-Nemesis / Rival..."/>
+                <!-- ⑦ Relationship to Protagonist (주인공 설정 시 숨김) -->
+                <div id="rel-to-protagonist-container" class="space-y-2">
+                    <label for="char-rel-to-proto" class="text-[10px] font-bold text-secondary uppercase tracking-widest ml-1">주인공과의 관계</label>
+                    <input id="char-rel-to-proto" type="text" class="w-full h-12 recessed-input px-4 text-white text-sm border-l-4 border-secondary/40" placeholder="예) 숨겨진 동맹 / 앙숙 / 라이벌…"/>
                 </div>
 
-                <div class="pt-6 flex flex-wrap gap-4">
-                    <button type="submit" id="save-char-btn" disabled class="flex-1 h-14 bg-primary-dim text-white font-black rounded-xl ambient-shadow hover:bg-primary transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed text-lg tracking-tight">
-                        Auth Loading...
+                <!-- ⑧ Action Buttons -->
+                <div class="pt-4 flex flex-wrap gap-3">
+                    <!-- Save Button with Spinner/Saved state -->
+                    <button type="submit" id="save-char-btn" disabled
+                        class="flex-1 h-14 bg-primary-dim text-white font-black rounded-xl ambient-shadow hover:bg-primary transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed text-base tracking-tight flex items-center justify-center gap-2">
+                        <span id="save-btn-icon" class="material-symbols-outlined text-sm hidden">check</span>
+                        <svg id="save-btn-spinner" class="hidden animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span id="save-btn-text">인증 확인 중...</span>
                     </button>
-                    <button type="button" id="delete-char-btn" class="hidden px-6 h-14 bg-error-dim/20 text-error hover:bg-error-dim/30 font-bold rounded-xl border border-error/20 transition-all flex items-center gap-2">
+                    <button type="button" id="delete-char-btn" class="hidden px-5 h-14 bg-error-dim/20 text-error hover:bg-error-dim/30 font-bold rounded-xl border border-error/20 transition-all flex items-center gap-2">
                         <span class="material-symbols-outlined text-sm">delete</span>
                     </button>
-                    <button type="button" id="archive-char-btn" class="px-8 h-14 bg-surface-container-high text-on-surface font-bold rounded-xl hover:bg-surface-bright transition-all">
-                        Archive
+                    <button type="button" id="archive-char-btn" class="px-6 h-14 bg-surface-container-high text-on-surface font-bold rounded-xl hover:bg-surface-bright transition-all flex items-center gap-2 text-sm">
+                        <span class="material-symbols-outlined text-sm">archive</span> Archive
                     </button>
                 </div>
             </form>
         </div>
     </section>
 
-    <!-- Timeline Event Editor Modal (Hidden) -->
-    <div id="timeline-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden animate-in fade-in duration-300">
-        <div class="glass-panel w-[400px] p-6 rounded-2xl shadow-2xl relative">
-            <h3 class="text-lg font-headline font-bold text-white mb-4">Edit Scene</h3>
+    <!-- ===== Timeline Event Modal ===== -->
+    <div id="timeline-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden">
+        <div class="glass-panel w-[420px] p-6 rounded-2xl shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <h3 class="text-lg font-headline font-bold text-white mb-4" id="modal-title">New Scene</h3>
             <div class="space-y-4">
                 <div class="space-y-2">
                     <label for="event-title" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Title</label>
-                    <input id="event-title" type="text" class="w-full h-10 recessed-input px-4 text-white text-sm" placeholder="Scene Title..."/>
+                    <input id="event-title" type="text" class="w-full h-10 recessed-input px-4 text-white text-sm" placeholder="장면 제목..."/>
                 </div>
                 <div class="space-y-2">
                     <label for="event-summary" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Summary (Max 200자)</label>
-                    <textarea id="event-summary" class="w-full recessed-input p-4 text-white text-xs leading-relaxed min-h-[100px]" maxlength="200" placeholder="Briefly describe the event..."></textarea>
+                    <textarea id="event-summary" class="w-full recessed-input p-4 text-white text-xs leading-relaxed min-h-[90px]" maxlength="200" placeholder="사건을 간략히 서술하세요..."></textarea>
                 </div>
                 <div class="space-y-2">
                     <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Participants</span>
                     <div id="event-participants-list" class="flex flex-wrap gap-2 max-h-[100px] overflow-y-auto pr-2 custom-scroll">
-                        <!-- Dynamic Checkboxes for Characters -->
-                        <p class="text-[10px] italic text-on-surface-variant/40">Loading characters...</p>
+                        <p class="text-[10px] italic text-on-surface-variant/40">캐릭터 로딩 중...</p>
                     </div>
                 </div>
                 <div class="flex gap-3 pt-2">
@@ -218,40 +250,42 @@
         </div>
     </div>
 
-    <!-- Pomodoro Neon Pulse Overlay (Hidden) -->
+    <!-- Pomodoro Pulse Overlay -->
     <div id="pomodoro-pulse" class="fixed inset-0 pointer-events-none z-[100] hidden neon-pulse opacity-50"></div>
 
-    <!-- Right Column: Map & List -->
+    <!-- ===== RIGHT: Map + Character List ===== -->
     <section class="w-[420px] flex-shrink-0 h-full flex flex-col gap-6">
         <div class="flex items-center justify-between">
             <h3 class="font-headline font-bold text-white tracking-tight">Relationship Map</h3>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
+                <span id="map-filter-label" class="hidden text-[10px] text-secondary font-bold uppercase tracking-widest">필터 적용 중</span>
                 <span class="material-symbols-outlined text-primary cursor-pointer hover:rotate-180 transition-transform duration-700">hub</span>
             </div>
         </div>
-        
+
         <!-- Map Rendering Area -->
-        <div class="flex-1 bg-surface-container-low rounded-2xl relative overflow-hidden group">
+        <div id="relationship-map" class="flex-1 bg-surface-container-low rounded-2xl relative overflow-hidden group min-h-0">
             <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#7e51ff 1px, transparent 1px); background-size: 24px 24px;"></div>
-            <!-- main.js will inject dynamic SVG and nodes here -->
+            <!-- JS injects SVG + nodes here -->
+            <p id="map-empty-hint" class="absolute inset-0 flex items-center justify-center text-[10px] text-on-surface-variant/40 italic text-center p-8">
+                등록된 캐릭터가 없습니다
+            </p>
         </div>
 
-        <!-- Character List: Registered Ensemble -->
-        <div class="bg-surface-container-high rounded-3xl p-6 ambient-shadow max-h-[40%] flex flex-col">
-            <div class="flex items-center justify-between mb-6">
+        <!-- Character List -->
+        <div class="bg-surface-container-high rounded-3xl p-5 ambient-shadow max-h-[38%] flex flex-col">
+            <div class="flex items-center justify-between mb-4">
                 <h4 class="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant">Registered Characters</h4>
                 <div id="character-count-badge" class="bg-primary/20 text-primary-fixed text-[10px] font-black px-2 py-1 rounded-full border border-primary/20">0</div>
             </div>
-            
-            <div id="character-list-container" class="flex-1 overflow-y-auto space-y-4 pr-1 custom-scroll">
-                <!-- Firebase data will populate here -->
-                <p class="text-xs text-on-surface-variant/40 italic py-4 text-center">Your manuscript is currently unpopulated...</p>
+            <div id="character-list-container" class="flex-1 overflow-y-auto space-y-3 pr-1 custom-scroll">
+                <p class="text-xs text-on-surface-variant/40 italic py-4 text-center">원고가 아직 비어있습니다...</p>
             </div>
         </div>
     </section>
+
 </main>
 
 <script type="module" src="/src/main.js"></script>
 </body>
 </html>
-
