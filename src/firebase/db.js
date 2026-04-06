@@ -164,10 +164,11 @@ export const subscribeToTimelineEvents = (projectId, callback) => {
 };
 
 // Characters: 캐릭터 저장 (기본값 status: 'active')
-export const saveCharacter = async (characterData, userId) => {
+export const saveCharacter = async (characterData, userId, projectId) => {
   try {
     const docRef = await addDoc(collection(db, "characters"), {
       userId,
+      projectId,
       status: 'active',
       ...characterData,
       createdAt: serverTimestamp(),

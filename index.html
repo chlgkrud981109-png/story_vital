@@ -99,7 +99,7 @@
                         <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200" alt="Avatar Mockup" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">
                         <div class="absolute inset-0 bg-primary-dim/20 mix-blend-overlay"></div>
                     </div>
-                    <button class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary-dim text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform">
+                    <button type="button" aria-label="Edit Avatar" class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary-dim text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform">
                         <span class="material-symbols-outlined text-sm">edit</span>
                     </button>
                 </div>
@@ -164,7 +164,8 @@
                         <!-- Relationship rows (Target Select + Description) injected -->
                     </div>
                 </div>
-
+                <div class="space-y-2">
+                    <label for="char-personality" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Inner World (Personality)</label>
                     <textarea id="char-personality" class="w-full recessed-input p-4 text-white text-sm leading-relaxed min-h-[120px]" placeholder="Describe their inner world..."></textarea>
                 </div>
 
@@ -195,24 +196,23 @@
             <h3 class="text-lg font-headline font-bold text-white mb-4">Edit Scene</h3>
             <div class="space-y-4">
                 <div class="space-y-2">
-                    <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Title</label>
+                    <label for="event-title" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Title</label>
                     <input id="event-title" type="text" class="w-full h-10 recessed-input px-4 text-white text-sm" placeholder="Scene Title..."/>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Summary (Max 200자)</label>
+                    <label for="event-summary" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Summary (Max 200자)</label>
                     <textarea id="event-summary" class="w-full recessed-input p-4 text-white text-xs leading-relaxed min-h-[100px]" maxlength="200" placeholder="Briefly describe the event..."></textarea>
                 </div>
-                <!-- NEW: Participants Selection -->
                 <div class="space-y-2">
-                    <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Participants</label>
+                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Participants</span>
                     <div id="event-participants-list" class="flex flex-wrap gap-2 max-h-[100px] overflow-y-auto pr-2 custom-scroll">
                         <!-- Dynamic Checkboxes for Characters -->
                         <p class="text-[10px] italic text-on-surface-variant/40">Loading characters...</p>
                     </div>
                 </div>
                 <div class="flex gap-3 pt-2">
-                    <button id="save-event-btn" class="flex-1 h-10 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-dim transition-all">Save Event</button>
-                    <button id="close-event-modal" class="px-4 h-10 bg-surface-container-highest text-on-surface-variant text-xs font-bold rounded-lg hover:bg-surface-bright transition-all">Cancel</button>
+                    <button id="save-event-btn" type="button" class="flex-1 h-10 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-dim transition-all">Save Event</button>
+                    <button id="close-event-modal" type="button" class="px-4 h-10 bg-surface-container-highest text-on-surface-variant text-xs font-bold rounded-lg hover:bg-surface-bright transition-all">Cancel</button>
                 </div>
             </div>
         </div>

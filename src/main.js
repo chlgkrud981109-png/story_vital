@@ -1,5 +1,5 @@
 import './style.css';
-import { signInWithGoogle, logout, subscribeToAuthChanges, checkRedirectResult } from './firebase/auth.js';
+import { signInWithGoogle, logout, subscribeToAuthChanges } from './firebase/auth.js';
 import { 
   getDefaultProject, saveCharacter, subscribeToCharacters, updateCharacter, deleteCharacter, 
   archiveCharacter, saveTimelineEvent, updateTimelineEvent, subscribeToTimelineEvents 
@@ -176,11 +176,20 @@ const initApp = () => {
   addEventBtn?.addEventListener('click', () => openEventModal());
   closeEventBtn?.addEventListener('click', () => eventModal.classList.add('hidden'));
 
-  saveEventBtn?.addEventListener('click', async () => {
-    if (!currentProjectId) return;
+  saveEventBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    console.log("[Main] Save Event clicked. currentProjectId:", currentProjectId);
+    if (!currentProjectId) {
+      showToast("Initializing project... Please wait.");
+      return;
+    }
+    
     const title = eventTitleInput.value.trim();
     const summary = eventSummaryInput.value.trim();
-    if (!title) return;
+    if (!title) {
+        showToast("Please enter a scene title.");
+        return;
+    }
 
     const participantIds = Array.from(eventParticipantsList.querySelectorAll('input:checked')).map(el => el.value);
 
@@ -188,7 +197,7 @@ const initApp = () => {
       projectId: currentProjectId,
       title,
       summary,
-      participantIds,
+      participantIds: participantIds || [],
       order: Date.now()
     };
 
@@ -197,14 +206,16 @@ const initApp = () => {
       else await saveTimelineEvent(eventData);
       eventModal.classList.add('hidden');
       showToast("Timeline entry synchronized.");
-    } catch (err) { showToast("Timeline sync failed."); }
+    } catch (err) { 
+      console.error("Timeline sync error:", err);
+      showToast("Timeline sync failed."); 
+    }
   });
 
   const renderTimeline = (events) => {
     if (!timelineContainer) return;
     timelineContainer.innerHTML = '<div class="absolute left-[7px] top-0 bottom-0 w-0.5 timeline-line opacity-20"></div>';
     
-    // Add "Reset Map Filter" option if filtering is active
     if (activeParticipantIds) {
       const resetBtn = document.createElement('button');
       resetBtn.className = 'w-full mb-4 py-2 bg-primary/10 text-primary text-[10px] font-bold rounded-lg border border-primary/20 hover:bg-primary/20 transition-all';
@@ -220,24 +231,35 @@ const initApp = () => {
     events.forEach(e => {
       const div = document.createElement('div');
       div.className = `relative pl-8 group cursor-pointer hover:bg-surface-container-high/20 p-2 rounded-lg transition-all animate-in fade-in slide-in-from-left-4 duration-300 ${activeParticipantIds && (e.participantIds || []).length > 0 && e.participantIds.some(id => activeParticipantIds.includes(id)) ? 'bg-primary/5 border-l-2 border-primary/20' : ''}`;
+      
+      const avatarHtml = e.participantIds?.length > 0 ? `<div class="mt-2 flex -space-x-2">${e.participantIds.map(id => {
+          const c = registeredCharacters.find(char => char.id === id);
+          return c ? `<div class="w-5 h-5 rounded-full border border-surface bg-surface-container overflow-hidden"><img src="${c.avatarUrl}" class="w-full h-full object-cover"></div>` : '';
+        }).join('')}</div>` : '';
+
       div.innerHTML = `
         <div class="absolute left-0 top-3.5 w-4 h-4 rounded-full bg-surface border-2 border-primary-dim z-10 group-hover:scale-125 transition-transform"></div>
         <div class="flex items-start justify-between">
           <h4 class="text-sm font-semibold text-white mb-1 group-hover:text-primary transition-colors">${e.title}</h4>
-          <span class="material-symbols-outlined text-xs text-on-surface-variant hover:text-white" onclick="event.stopPropagation(); openEventModal(${JSON.stringify(e).replace(/"/g, '&quot;')})">edit</span>
+          <span class="material-symbols-outlined text-xs text-on-surface-variant hover:text-white edit-event-btn">edit</span>
         </div>
         <p class="text-[11px] text-on-surface-variant leading-relaxed line-clamp-3">${e.summary}</p>
-        ${e.participantIds?.length > 0 ? `<div class="mt-2 flex -space-x-2">${e.participantIds.map(id => {
-          const c = registeredCharacters.find(char => char.id === id);
-          return c ? `<div class="w-5 h-5 rounded-full border border-surface bg-surface-container overflow-hidden"><img src="${c.avatarUrl}" class="w-full h-full object-cover"></div>` : '';
-        }).join('')}</div>` : ''}
+        ${avatarHtml}
       `;
+
+      // Event Listeners for individual scene cards
+      div.querySelector('.edit-event-btn').addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        openEventModal(e);
+      });
+
       div.addEventListener('click', (ev) => {
-        if (ev.target.textContent === 'edit') return;
+        if (ev.target.classList.contains('edit-event-btn')) return;
         activeParticipantIds = e.participantIds || [];
         updateMapVisualization(registeredCharacters);
         renderTimeline(events);
       });
+
       timelineContainer.appendChild(div);
     });
   };
@@ -283,7 +305,7 @@ const initApp = () => {
       });
       div.innerHTML = `
         <div class="col-span-11 relative">
-          <select class="w-full h-10 recessed-input px-3 text-xs appearance-none border border-surface-bright/20" data-field="targetId" data-index="${index}">${optionsHtml}</select>
+          <select aria-label="Select Relationship Target" class="w-full h-10 recessed-input px-3 text-xs appearance-none border border-surface-bright/20" data-field="targetId" data-index="${index}">${optionsHtml}</select>
           <span class="material-symbols-outlined absolute right-2 top-2 text-[14px] text-on-surface-variant pointer-events-none">expand_more</span>
         </div>
         <div class="col-span-1 flex justify-center">
@@ -437,28 +459,52 @@ const initApp = () => {
 
   // ----- Auth & Execution -----
   subscribeToAuthChanges(async (user) => {
+    console.log("[Main] Auth state changed. User:", user ? user.uid : "None");
     currentUser = user;
+    
     if (user) {
+      console.log(`Login Success: ${user.displayName}`);
       authContainer.innerHTML = `<div class="flex items-center gap-3"><img src="${user.photoURL}" class="w-8 h-8 rounded-full border border-primary/20"><button id="logout-btn" class="text-xs text-on-surface-variant hover:text-white">Logout</button></div>`;
       document.getElementById('logout-btn').addEventListener('click', logout);
       
       try {
+        console.log("[Main] Fetching default project for user...");
         const project = await getDefaultProject(user.uid);
-        currentProjectId = project.id;
+        console.log("[Main] Project received:", project);
         
+        if (!project || !project.id) throw new Error("Project ID is missing from response.");
+        
+        currentProjectId = project.id;
+        console.log(`[Main] Active Project ID set: ${currentProjectId}`);
+
+        // 프로젝트 ID 설정 완료 후 모든 버튼 즉시 활성화
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerText = isEditing ? "Update Character" : "Save Character";
+        }
+        if (addEventBtn) {
+          addEventBtn.disabled = false;
+          console.log("[Main] addEventBtn enabled");
+        }
+        if (saveEventBtn) saveEventBtn.disabled = false;
+
+        // 구독 시작
+        console.log("[Main] Starting subscriptions...");
         if (unsubscribeCharacters) unsubscribeCharacters();
         unsubscribeCharacters = subscribeToCharacters(user.uid, (chars) => {
           registeredCharacters = chars;
           const container = document.getElementById('character-list-container');
-          document.getElementById('character-count-badge').innerText = chars.length;
-          container.innerHTML = chars.length ? '' : '<p class="text-xs italic py-4 text-center">Manuscript is empty...</p>';
-          chars.forEach(c => {
-            const card = document.createElement('div');
-            card.className = `p-4 rounded-lg cursor-pointer bg-surface-container-low hover:bg-surface-container-highest transition-all flex items-center gap-4 mb-4 ${c.isProtagonist ? 'border-l-4 border-primary' : ''}`;
-            card.innerHTML = `<div class="w-10 h-10 rounded-full border border-primary/20 overflow-hidden"><img src="${c.avatarUrl}" class="w-full h-full object-cover"></div><div><h4 class="text-sm font-bold text-white">${c.fullName}</h4><p class="text-[9px] uppercase tracking-widest text-on-surface-variant">${c.archetype}</p></div>`;
-            card.addEventListener('click', () => populateEditForm(c));
-            container.appendChild(card);
-          });
+          if (container) {
+            document.getElementById('character-count-badge').innerText = chars.length;
+            container.innerHTML = chars.length ? '' : '<p class="text-xs italic py-4 text-center">Manuscript is empty...</p>';
+            chars.forEach(c => {
+              const card = document.createElement('div');
+              card.className = `p-4 rounded-lg cursor-pointer bg-surface-container-low hover:bg-surface-container-highest transition-all flex items-center gap-4 mb-4 ${c.isProtagonist ? 'border-l-4 border-primary' : ''}`;
+              card.innerHTML = `<div class="w-10 h-10 rounded-full border border-primary/20 overflow-hidden"><img src="${c.avatarUrl}" class="w-full h-full object-cover"></div><div><h4 class="text-sm font-bold text-white">${c.fullName}</h4><p class="text-[9px] uppercase tracking-widest text-on-surface-variant">${c.archetype}</p></div>`;
+              card.addEventListener('click', () => populateEditForm(c));
+              container.appendChild(card);
+            });
+          }
           updateMapVisualization(chars);
           renderRelationships();
         });
@@ -467,21 +513,21 @@ const initApp = () => {
         unsubscribeTimeline = subscribeToTimelineEvents(currentProjectId, (events) => renderTimeline(events));
 
       } catch (err) {
-        console.error("Project initialization failed:", err);
+        console.error("[Main] Project initialization failed:", err);
         showToast("Session initialization error. Please refresh.");
-      } finally {
         if (saveBtn) {
-          saveBtn.disabled = false;
-          saveBtn.innerText = isEditing ? "Update Character" : "Save Character";
+          saveBtn.disabled = true;
+          saveBtn.innerText = "Init Failed";
         }
+        // 예외 상황에서도 UI 접근성을 위해 로그아웃 버튼 등은 유지
       }
     } else {
       authContainer.innerHTML = `<button id="login-btn" class="bg-primary text-white font-bold py-1.5 px-4 rounded-lg text-sm">Login with Google</button>`;
-      document.getElementById('login-btn').addEventListener('click', signInWithGoogle);
-      if (saveBtn) {
-        saveBtn.disabled = true;
-        saveBtn.innerText = "Auth Required";
-      }
+      document.getElementById('login-btn').addEventListener('click', () => {
+        console.log("[Main] Login button clicked -> Calling signInWithGoogle");
+        signInWithGoogle();
+      });
+      currentProjectId = null;
     }
   });
 
@@ -506,7 +552,7 @@ const initApp = () => {
 
     try {
       if (isEditing) await updateCharacter(editingId, charData);
-      else await saveCharacter(charData, currentUser.uid);
+      else await saveCharacter(charData, currentUser.uid, currentProjectId);
       showToast("Character synchronization complete.");
       resetForm();
     } catch (err) {
