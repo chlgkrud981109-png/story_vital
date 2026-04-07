@@ -10,71 +10,51 @@
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { firebaseConfig } from './firebase-config.js';
 
-  // [EMERGENCY FIX] Hardcoded firebase config for production
-  const firebaseConfig = {
-    apiKey: "AIzaSyBEkQmeFG8XGxNuYDZof_3_9oOS4cEMOyk",
-    authDomain: "story-vital.firebaseapp.com",
-    projectId: "story-vital",
-    storageBucket: "story-vital.firebasestorage.app",
-    messagingSenderId: "872952700994",
-    appId: "1:872952700994:web:efa41cd38cd491fe5ccddb"
-  };
+  let db, auth;
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app); auth = getAuth(app);
+  } catch(e) {}
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
-
-  // Initialize global state immediately
-  window.appChars = [];
-  window.currentUser = null;
-
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      window.currentUser = user;
-      const activeWorkId = localStorage.getItem('sv_activeWork');
-      if (!activeWorkId) { location.href = 'index.html'; return; }
-      
-      const q = query(collection(db, 'characters'), where('projectId', '==', activeWorkId));
-      onSnapshot(q, snap => {
-        window.appChars = snap.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().fullName })); 
-        applyRender();
-      });
-    } else {
-      location.href = 'index.html';
-    }
+  window.addEventListener('load', () => {
+    if (!auth) { loadDemo(); return; }
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        window.currentUser = user;
+        const workId = localStorage.getItem('sv_activeWork') || 'default';
+        const q = query(collection(db, 'characters'), where('userId', '==', user.uid), where('projectId', '==', workId));
+        onSnapshot(q, snap => {
+          const chars = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          window.appChars = chars.length ? chars : getDemoChars();
+          applyRender();
+        });
+      } else { loadDemo(); }
+    });
   });
 
   window.saveCharDb = async (char) => {
-    const activeWorkId = localStorage.getItem('sv_activeWork');
-    if (!window.currentUser || !activeWorkId) return null;
-    
-    const charData = { 
-      ...char, 
-      fullName: char.name, 
-      projectId: activeWorkId,
-      updatedAt: new Date().toISOString()
-    };
-    delete charData.name;
-
+    if (!window.currentUser || !db) return null;
+    const workId = localStorage.getItem('sv_activeWork') || 'default';
+    const charData = { ...char, userId: window.currentUser.uid, projectId: workId, updatedAt: new Date().toISOString() };
     try {
-      if (char.id && !char.id.startsWith('local')) {
-        const id = char.id;
-        delete charData.id;
-        await updateDoc(doc(db, 'characters', id), charData);
-        return id;
+      if (char.id && !char.id.startsWith('demo') && !char.id.startsWith('local')) {
+        await updateDoc(doc(db, 'characters', char.id), charData);
+        return char.id;
       } else {
-        const docRef = await addDoc(collection(db, 'characters'), charData);
+        const ref = collection(db, 'characters');
+        const docRef = await addDoc(ref, charData);
         return docRef.id;
       }
-    } catch(e) { console.error(e); return null; }
+    } catch(e) { console.error('Save error:', e); return null; }
   };
 
   window.deleteCharDb = async (id) => {
-    if (!id || id.startsWith('local')) return;
-    try { await deleteDoc(doc(db, 'characters', id)); } catch(e) { console.error(e); }
+    if (!window.currentUser || !db) return;
+    try { await deleteDoc(doc(db, 'characters', id)); } catch(e) {}
   };
 </script>
 
@@ -89,21 +69,74 @@
 * { box-sizing:border-box; margin:0; padding:0; }
 .mat-icon { font-family:'Material Symbols Outlined'; font-style:normal; user-select:none; line-height:1; }
 body { background:#09090d; color:#eae6f4; font-family:'Manrope',sans-serif; overflow-x:hidden; }
+.glass { background:rgba(20,20,25,0.7); backdrop-filter:blur(20px); border:1px solid rgba(184,162,255,0.09); }
 .glass-bright { background:rgba(26,26,33,0.85); backdrop-filter:blur(24px); border:1px solid rgba(184,162,255,0.12); }
 .glow { box-shadow:0 0 24px rgba(124,80,255,0.35); }
 .nav-link { color:#9e9aaa; transition:color 0.15s; }
+.nav-link:hover { color:#eae6f4; }
 .nav-active { color:#b8a2ff !important; }
 .sidebar-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; color:#9e9aaa; font-size:14px; transition:all 0.15s; cursor:pointer; text-decoration:none; }
+.sidebar-item:hover { background:rgba(255,255,255,0.04); color:#eae6f4; }
 .sidebar-active { background:rgba(124,80,255,0.15); color:#b8a2ff; border-left:2px solid #7c50ff; padding-left:10px; }
-.inp { background:rgba(0,0,0,0.6); border:1px solid rgba(184,162,255,0.1); border-radius:10px; padding:10px 14px; color:#eae6f4; font-size:14px; width:100%; outline:none; transition:border-color 0.2s,box-shadow 0.2s; }
+.inp { background:rgba(0,0,0,0.6); border:1px solid rgba(184,162,255,0.1); border-radius:10px; padding:10px 14px; color:#eae6f4; font-size:14px; width:100%; outline:none; transition:border-color 0.2s,box-shadow 0.2s; font-family:'Manrope',sans-serif; }
+.inp:focus { border-color:#7c50ff; box-shadow:0 0 0 3px rgba(124,80,255,0.15); }
+.inp::placeholder { color:#5e5b68; }
+select.inp option { background:#1a1a21; }
+
+/* Search highlight */
+.search-highlight { background:rgba(124,80,255,0.25); border-radius:2px; }
+
+/* Char card */
 .char-card { border:1px solid rgba(184,162,255,0.08); border-radius:14px; transition:all 0.2s ease; cursor:pointer; background:rgba(26,26,33,0.6); }
+.char-card:hover { transform:translateY(-3px); border-color:rgba(184,162,255,0.2); box-shadow:0 12px 32px rgba(0,0,0,0.4); }
+.char-card.selected { border-color:rgba(124,80,255,0.5); box-shadow:0 0 0 2px rgba(124,80,255,0.2); }
+
+/* Detail panel */
+.detail-panel { position:fixed; right:-520px; top:0; bottom:0; width:480px; z-index:200; transition:right 0.35s cubic-bezier(0.4,0,0.2,1); background:#0e0e13; border-left:1px solid rgba(184,162,255,0.1); display:flex; flex-direction:column; overflow:hidden; }
+.detail-panel.open { right:0; }
+.detail-overlay { position:fixed; inset:0; z-index:199; background:rgba(0,0,0,0.4); display:none; }
+.detail-overlay.open { display:block; }
+
+/* Drawer (add/edit) */
+.form-drawer { position:fixed; right:-520px; top:0; bottom:0; width:480px; z-index:300; transition:right 0.35s cubic-bezier(0.4,0,0.2,1); background:#0e0e13; border-left:1px solid rgba(184,162,255,0.12); display:flex; flex-direction:column; }
+.form-drawer.open { right:0; }
+
+/* Filter pills */
 .filter-pill { padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s; border:1px solid rgba(184,162,255,0.15); color:#9e9aaa; }
 .filter-pill.active { background:rgba(124,80,255,0.2); color:#b8a2ff; border-color:rgba(124,80,255,0.4); }
+
+/* Role badge */
+.role-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
+
+/* Tag input */
+.tag { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px; font-size:12px; background:rgba(124,80,255,0.15); color:#b8a2ff; border:1px solid rgba(124,80,255,0.25); }
+.tag button { display:flex; align-items:center; opacity:0.6; }
+.tag button:hover { opacity:1; }
+
+/* Relation row */
+.relation-row { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:10px; background:rgba(0,0,0,0.3); margin-bottom:6px; }
+
+/* Modal */
+.modal-bg { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; }
+
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(184,162,255,0.18); border-radius:4px; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.fade-up { animation:fadeUp 0.4s ease forwards; }
+.d1 { animation-delay:0.05s; opacity:0; }
+.d2 { animation-delay:0.12s; opacity:0; }
+
 @media(min-width:1024px) { .sidebar-desktop{display:flex} .ml-sidebar{margin-left:224px} }
+@media(max-width:1023px) { .sidebar-desktop{display:none} .ml-sidebar{margin-left:0} }
+@media(max-width:640px) { .detail-panel,.form-drawer{width:100%; right:-100%} }
 </style>
 </head>
 
 <body>
+
+<!-- NAV -->
 <nav class="fixed top-0 left-0 right-0 z-[100] h-16 glass-bright flex items-center justify-between px-4 lg:px-6">
   <div class="flex items-center gap-3">
     <a href="index.html" class="flex items-center gap-2">
@@ -120,13 +153,17 @@ body { background:#09090d; color:#eae6f4; font-family:'Manrope',sans-serif; over
     </div>
   </div>
   <div class="flex items-center gap-2">
+    <!-- Active work indicator -->
     <div class="hidden sm:flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm" style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,162,255,0.1)">
       <span class="mat-icon text-sm" style="color:#b8a2ff;font-size:15px">book</span>
       <span class="text-white font-semibold text-xs" id="nav-work-name">-</span>
     </div>
+    <img src="https://api.dicebear.com/7.x/initials/svg?seed=작가&backgroundColor=7c50ff" id="user-avatar"
+      alt="" class="w-8 h-8 rounded-full object-cover" style="border:1px solid rgba(124,80,255,0.4)"/>
   </div>
 </nav>
 
+<!-- SIDEBAR -->
 <aside class="sidebar-desktop fixed left-0 top-16 bottom-0 w-56 flex-col py-5 z-50" style="background:#0e0e13;border-right:1px solid rgba(184,162,255,0.06)">
   <div class="px-4 mb-4">
     <p class="text-xs uppercase tracking-widest mb-1" style="color:#5e5b68">현재 작품</p>
@@ -140,49 +177,526 @@ body { background:#09090d; color:#eae6f4; font-family:'Manrope',sans-serif; over
   </nav>
 </aside>
 
-<main class="ml-sidebar pt-16 min-h-screen">
+<!-- MAIN -->
+<main class="ml-sidebar pt-16 min-h-screen" style="padding-bottom:80px">
+
+  <!-- Subheader -->
   <div class="sticky top-16 z-[80]" style="background:rgba(9,9,13,0.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(184,162,255,0.06)">
-    <div class="px-4 lg:px-8 py-4 flex flex-col sm:flex-row items-center gap-3">
-      <div class="flex-1 text-white font-bold">캐릭터 데이터베이스 <span id="char-count-label" class="text-sm font-normal text-gray-400">· 0명</span></div>
-      <div class="flex items-center gap-2">
-        <input id="search-input" type="text" placeholder="검색..." class="inp w-48 sm:w-64" oninput="onSearch(this.value)"/>
-        <button onclick="openFormDrawer(null)" class="bg-[#7c50ff] text-white px-4 py-2 rounded-xl text-sm font-bold glow">추가</button>
+    <div class="px-4 lg:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+      <div class="flex-1">
+        <h1 class="text-lg font-display font-extrabold text-white flex items-center gap-2">
+          <span class="mat-icon" style="color:#b8a2ff">group</span>
+          캐릭터 데이터베이스
+          <span class="text-sm font-normal" style="color:#9e9aaa" id="char-count-label">· 0명</span>
+        </h1>
+      </div>
+      <!-- Search -->
+      <div class="flex items-center gap-2 flex-1 sm:flex-initial">
+        <div class="relative flex-1 sm:w-64">
+          <span class="mat-icon absolute left-3 top-1/2 -translate-y-1/2 text-base" style="color:#9e9aaa;font-size:18px">search</span>
+          <input id="search-input" type="text" placeholder="이름, 능력, 성격 검색..."
+            class="inp pl-9 py-2" style="font-size:13px" oninput="onSearch(this.value)"/>
+          <button id="search-clear" onclick="clearSearch()" class="absolute right-3 top-1/2 -translate-y-1/2 mat-icon text-base hidden" style="color:#9e9aaa;font-size:18px">close</button>
+        </div>
+        <button onclick="openFormDrawer(null)"
+          class="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white flex-shrink-0 glow"
+          style="background:#7c50ff">
+          <span class="mat-icon text-base">person_add</span>
+          <span class="hidden sm:block">추가</span>
+        </button>
+      </div>
+    </div>
+    <!-- Filters -->
+    <div class="px-4 lg:px-8 pb-3 flex items-center gap-2 flex-wrap">
+      <button onclick="setFilter('all')" class="filter-pill active" data-f="all">전체</button>
+      <button onclick="setFilter('주인공')" class="filter-pill" data-f="주인공">주인공</button>
+      <button onclick="setFilter('히로인')" class="filter-pill" data-f="히로인">히로인</button>
+      <button onclick="setFilter('조력자')" class="filter-pill" data-f="조력자">조력자</button>
+      <button onclick="setFilter('빌런')" class="filter-pill" data-f="빌런">빌런</button>
+      <button onclick="setFilter('조연')" class="filter-pill" data-f="조연">조연</button>
+      <!-- Sort -->
+      <div class="ml-auto">
+        <select id="sort-select" class="inp text-xs" style="padding:6px 10px;width:auto" onchange="applyRender()">
+          <option value="name">이름순</option>
+          <option value="role">역할순</option>
+          <option value="created">추가순</option>
+          <option value="chapter">등장화순</option>
+        </select>
       </div>
     </div>
   </div>
+
+  <!-- Grid -->
   <div class="px-4 lg:px-8 py-5">
     <div id="char-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
+    <div id="empty-state" class="hidden text-center py-20">
+      <span class="mat-icon block mb-3" style="font-size:48px;color:#5e5b68">person_search</span>
+      <p class="text-base font-semibold" style="color:#9e9aaa" id="empty-msg">캐릭터가 없습니다</p>
+      <p class="text-sm mt-1 mb-5" style="color:#5e5b68" id="empty-sub">첫 인물을 만들어 이야기를 시작하세요.</p>
+      <button onclick="openFormDrawer(null)" class="text-sm font-semibold rounded-xl px-5 py-2.5 text-white" style="background:#7c50ff">첫 캐릭터 만들기</button>
+    </div>
+    <div id="search-no-result" class="hidden text-center py-16">
+      <span class="mat-icon block mb-3" style="font-size:48px;color:#5e5b68">search_off</span>
+      <p class="text-base font-semibold" style="color:#9e9aaa">'<span id="search-term-display"></span>'에 대한 결과 없음</p>
+      <p class="text-sm mt-1" style="color:#5e5b68">다른 키워드로 검색해보세요.</p>
+    </div>
   </div>
 </main>
 
-<script>
-let state = { filter:'all', search:'' };
+<!-- MOBILE NAV -->
+<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-[90] h-16 flex items-center justify-around" style="background:rgba(9,9,13,0.95);border-top:1px solid rgba(184,162,255,0.08)">
+  <a href="index.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">dashboard</span><span style="font-size:10px">홈</span></a>
+  <a href="characters.html" class="flex flex-col items-center gap-1" style="color:#b8a2ff"><span class="mat-icon text-xl">group</span><span style="font-size:10px">캐릭터</span></a>
+  <a href="chapters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">auto_stories</span><span style="font-size:10px">챕터</span></a>
+  <a href="export.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">upload_file</span><span style="font-size:10px">내보내기</span></a>
+</nav>
 
-window.applyRender = () => {
-  let list = [...(window.appChars || [])];
-  if (state.search) list = list.filter(c => c.name.toLowerCase().includes(state.search.toLowerCase()));
-  
-  document.getElementById('char-count-label').textContent = `· ${list.length}명`;
-  const grid = document.getElementById('char-grid');
-  grid.innerHTML = list.map(c => `
-    <div class="char-card p-4" onclick="openDetail('${c.id}')">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="text-white font-bold">${c.name}</div>
-      </div>
-      <div class="text-xs text-gray-400">${c.role}</div>
+<!-- DETAIL PANEL OVERLAY -->
+<div id="detail-overlay" class="detail-overlay" onclick="closeDetail()"></div>
+
+<!-- DETAIL PANEL -->
+<div id="detail-panel" class="detail-panel pt-16">
+  <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid rgba(184,162,255,0.08)">
+    <h2 class="font-display font-bold text-white text-base">캐릭터 상세</h2>
+    <div class="flex items-center gap-2">
+      <button onclick="editFromDetail()" class="mat-icon text-xl nav-link">edit</button>
+      <button onclick="closeDetail()" class="mat-icon text-xl nav-link">close</button>
     </div>
-  `).join('');
-};
+  </div>
+  <div id="detail-content" class="flex-1 overflow-y-auto p-5"></div>
+</div>
 
-window.onSearch = (v) => { state.search = v; applyRender(); };
+<!-- FORM DRAWER -->
+<div id="form-drawer" class="form-drawer pt-16">
+  <div class="flex items-center justify-between px-5 py-4 flex-shrink-0" style="border-bottom:1px solid rgba(184,162,255,0.08)">
+    <h2 class="font-display font-bold text-white text-base" id="form-title">새 캐릭터</h2>
+    <button onclick="closeFormDrawer()" class="mat-icon text-xl nav-link">close</button>
+  </div>
+  <div class="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+    <input type="hidden" id="edit-id"/>
 
-window.openDetail = (id) => alert('상세 정보 준비 중');
-window.openFormDrawer = (id) => alert('입력 폼 준비 중');
+    <!-- Avatar preview -->
+    <div class="flex items-center gap-4 p-4 rounded-xl" style="background:rgba(0,0,0,0.4)">
+      <div id="avatar-preview" class="w-14 h-14 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0" style="background:#7c50ff">?</div>
+      <div class="text-sm" style="color:#9e9aaa">이름 입력 시 자동 배정</div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="col-span-2">
+        <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">이름 *</label>
+        <input id="f-name" type="text" placeholder="예: 이현준" class="inp" oninput="updatePreview(this.value)"/>
+      </div>
+      <div>
+        <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">역할</label>
+        <select id="f-role" class="inp">
+          <option>주인공</option><option>히로인</option><option>조력자</option>
+          <option>빌런</option><option>조연</option><option>단역</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">첫 등장 회차</label>
+        <input id="f-firstchap" type="text" placeholder="예: 1화" class="inp"/>
+      </div>
+    </div>
+
+    <div>
+      <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">아키타입</label>
+      <input id="f-archetype" type="text" placeholder="성장형 영웅, 트릭스터, 멘토..." class="inp"/>
+    </div>
+
+    <div>
+      <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">외모 & 특이사항</label>
+      <textarea id="f-appearance" rows="3" placeholder="머리색, 눈색, 체형, 특이한 외모 특징..." class="inp resize-none leading-relaxed"></textarea>
+    </div>
+
+    <div>
+      <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">성격 & 내면 세계</label>
+      <textarea id="f-personality" rows="3" placeholder="성격, 가치관, 약점, 내적 갈등..." class="inp resize-none leading-relaxed"></textarea>
+    </div>
+
+    <div>
+      <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">능력 & 기술</label>
+      <textarea id="f-ability" rows="2" placeholder="보유 능력, 제약 조건, 성장 가능성..." class="inp resize-none leading-relaxed"></textarea>
+    </div>
+
+    <div>
+      <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">과거사 & 배경</label>
+      <textarea id="f-backstory" rows="3" placeholder="출신, 트라우마, 현재 동기에 영향을 준 사건..." class="inp resize-none leading-relaxed"></textarea>
+    </div>
+
+    <!-- Keywords/tags -->
+    <div>
+      <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">키워드 태그</label>
+      <div class="flex items-center gap-2 mb-2">
+        <input id="tag-input" type="text" placeholder="태그 입력 후 Enter" class="inp flex-1" style="padding:7px 12px"
+          onkeydown="if(event.key==='Enter'){addTag();event.preventDefault()}"/>
+        <button onclick="addTag()" class="mat-icon rounded-lg flex-shrink-0 text-base" style="color:#b8a2ff;padding:8px;background:rgba(124,80,255,0.15)">add</button>
+      </div>
+      <div id="tags-container" class="flex flex-wrap gap-1.5"></div>
+    </div>
+
+    <!-- Relations -->
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <label class="text-xs uppercase tracking-wider" style="color:#5e5b68">인물 관계</label>
+        <button onclick="addRelation()" class="text-xs" style="color:#b8a2ff">+ 추가</button>
+      </div>
+      <div id="relations-container" class="space-y-2"></div>
+    </div>
+
+    <div>
+      <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">작가 메모 (비공개)</label>
+      <textarea id="f-memo" rows="2" placeholder="미래 복선, 반전 아이디어 등..." class="inp resize-none leading-relaxed"></textarea>
+    </div>
+  </div>
+
+  <div class="px-5 py-4 flex gap-3 flex-shrink-0" style="border-top:1px solid rgba(184,162,255,0.08)">
+    <button onclick="deleteChar()" id="delete-btn" class="hidden mat-icon rounded-xl px-3 text-base transition-all" style="color:#e8587a;border:1px solid rgba(232,88,122,0.25);background:rgba(232,88,122,0.08)">delete</button>
+    <button onclick="closeFormDrawer()" class="flex-1 rounded-xl py-3 text-sm" style="border:1px solid rgba(184,162,255,0.15);color:#9e9aaa">취소</button>
+    <button onclick="saveChar()" class="flex-1 rounded-xl py-3 text-sm font-semibold text-white" style="background:#7c50ff">저장하기</button>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#7c50ff','#9d60f0','#e8587a','#5080ff','#20b090','#d0a020','#e06030','#2090d0'];
+const ROLE_COLORS = { '주인공':'rgba(124,80,255,0.2)','히로인':'rgba(157,96,240,0.2)','조력자':'rgba(64,208,168,0.15)','빌런':'rgba(232,88,122,0.15)','조연':'rgba(94,91,104,0.2)','단역':'rgba(94,91,104,0.1)' };
+const ROLE_TEXT = { '주인공':'#b8a2ff','히로인':'#c490ff','조력자':'#40d0a8','빌런':'#ff9bbf','조연':'#9e9aaa','단역':'#5e5b68' };
+
+let state = { filter:'all', search:'', sort:'created', chars:[], selectedId:null, editId:null };
+let formTags = [], formRelations = [];
+
+// Init
+window.appChars = null;
+function loadDemo() {
+  window.appChars = getDemoChars();
+  applyRender();
+}
+function getDemoChars() {
+  return [
+    { id:'demo1', name:'이현준', role:'주인공', archetype:'성장형 영웅', firstChap:'1화', appearance:'검은 머리카락, 날카로운 눈매, 178cm. 왼쪽 손목에 마석 균열 흔적.', personality:'냉정해 보이지만 의리가 강하다. 혼자 짊어지려는 경향이 있어 갈등의 씨앗.', ability:'마력 흡수 및 역방출. 한계 이상 사용 시 기억 상실.', backstory:'3년 전 폐허 광산에서 유일하게 생존. 생존의 비밀을 쫓고 있다.', tags:['마석','기억상실','고독'], relations:[{name:'서이안',type:'히로인'},{name:'강민혁',type:'앙숙'}], memo:'사실 3세대 환생 마법사. 30화에서 공개 예정.', color:'#7c50ff', createdAt:'2024-01-01' },
+    { id:'demo2', name:'서이안', role:'히로인', archetype:'예언자', firstChap:'3화', appearance:'은백색 머리, 자주 눈을 피한다. 항상 흰 장갑 착용.', personality:'차갑고 말이 없지만 주인공에게만 조금씩 마음을 연다.', ability:'예지몽. 미래를 바꾸려 할수록 더 나쁜 결과가 온다.', backstory:'왕국 예언사 가문 출신. 7살부터 미래를 보기 시작.', tags:['예지몽','왕국','비밀'], relations:[{name:'이현준',type:'주인공'}], memo:'사실 주인공의 전생 아내. 자신도 기억 못 함.', color:'#9d60f0', createdAt:'2024-01-02' },
+    { id:'demo3', name:'강민혁', role:'빌런', archetype:'비극적 악역', firstChap:'12화', appearance:'40대 초반, 귀족 복장. 오른쪽 눈이 의안.', personality:'표면상 온화하지만 목적을 위해 수단을 가리지 않는다.', ability:'마법진 조작의 천재. 마계 봉인을 깰 수 있는 유일한 인물.', backstory:'과거 영웅이었으나 가족을 잃은 후 세계를 증오.', tags:['의안','마법진','비극'], relations:[{name:'이현준',type:'앙숙'}], memo:'최종장에서 구원 아크. 독자 울릴 것.', color:'#e8587a', createdAt:'2024-01-05' },
+    { id:'demo4', name:'유이나', role:'조력자', archetype:'해결사', firstChap:'8화', appearance:'짧은 빨간 머리, 항상 웃고 있다. 체구가 작지만 전투력이 높다.', personality:'밝고 긍정적. 어떤 상황에서도 웃음을 잃지 않지만 혼자 있을 때는 다르다.', ability:'신체 강화 마법. 단, 연속 사용 시 뼈에 균열이 생긴다.', backstory:'고아 출신. 마법사 길드 최연소 S급.', tags:['강화마법','길드','숨겨진상처'], relations:[{name:'이현준',type:'동료'},{name:'서이안',type:'친구'}], memo:'', color:'#20b090', createdAt:'2024-01-08' },
+  ];
+}
 
 window.addEventListener('load', () => {
-  document.getElementById('nav-work-name').textContent = localStorage.getItem('sv_workName') || '-';
-  document.getElementById('sidebar-work-name').textContent = localStorage.getItem('sv_workName') || '-';
+  const workName = localStorage.getItem('sv_workName') || '마법사의 귀환';
+  document.getElementById('nav-work-name').textContent = workName;
+  document.getElementById('sidebar-work-name').textContent = workName;
+
+  setTimeout(() => {
+    if (!window.appChars) { loadDemo(); }
+    else applyRender();
+  }, 1500);
 });
+
+// ─── Render ──────────────────────────────
+window.applyRender = function() {
+  let chars = [...(window.appChars || [])];
+
+  // Filter by role
+  if (state.filter !== 'all') chars = chars.filter(c => c.role === state.filter);
+
+  // Search
+  const q = state.search.toLowerCase().trim();
+  if (q) {
+    chars = chars.filter(c =>
+      [c.name,c.archetype,c.personality,c.ability,c.backstory,...(c.tags||[])].join(' ').toLowerCase().includes(q)
+    );
+  }
+
+  // Sort
+  const sort = document.getElementById('sort-select')?.value || 'created';
+  if (sort === 'name') chars.sort((a,b) => a.name.localeCompare(b.name,'ko'));
+  else if (sort === 'role') chars.sort((a,b) => a.role.localeCompare(b.role,'ko'));
+  else if (sort === 'chapter') chars.sort((a,b) => parseInt(a.firstChap)||99 - parseInt(b.firstChap)||99);
+
+  document.getElementById('char-count-label').textContent = `· ${chars.length}명`;
+
+  const grid = document.getElementById('char-grid');
+  const empty = document.getElementById('empty-state');
+  const noResult = document.getElementById('search-no-result');
+
+  grid.innerHTML = '';
+  empty.classList.add('hidden');
+  noResult.classList.add('hidden');
+
+  if (!window.appChars?.length) { empty.classList.remove('hidden'); return; }
+  if (!chars.length && q) {
+    document.getElementById('search-term-display').textContent = q;
+    noResult.classList.remove('hidden'); return;
+  }
+  if (!chars.length) { empty.classList.remove('hidden'); return; }
+
+  chars.forEach(c => {
+    const card = document.createElement('div');
+    card.className = `char-card fade-up ${c.id === state.selectedId ? 'selected' : ''}`;
+    card.onclick = () => openDetail(c.id);
+
+    const tagsHtml = (c.tags||[]).slice(0,3).map(t => `<span class="tag text-xs">${highlight(t, q)}</span>`).join('');
+
+    card.innerHTML = `
+      <div class="p-4">
+        <div class="flex items-start gap-3 mb-3">
+          <div class="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-base flex-shrink-0"
+            style="background:${c.color};box-shadow:0 0 16px ${c.color}40">${c.name[0]}</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-1">
+              <h3 class="font-display font-bold text-white text-sm truncate">${highlight(c.name, q)}</h3>
+              <button onclick="event.stopPropagation();openFormDrawer('${c.id}')" class="mat-icon text-base flex-shrink-0 nav-link">edit</button>
+            </div>
+            <p class="text-xs mt-0.5" style="color:#9e9aaa">${c.role} ${c.firstChap?'· '+c.firstChap:''}</p>
+          </div>
+        </div>
+        ${c.archetype ? `<span class="text-xs px-2 py-0.5 rounded-full mb-2 inline-block" style="background:${ROLE_COLORS[c.role]||'rgba(94,91,104,0.2)'};color:${ROLE_TEXT[c.role]||'#9e9aaa'}">${c.archetype}</span>` : ''}
+        ${c.personality ? `<p class="text-xs leading-relaxed mb-2 line-clamp-2" style="color:#9e9aaa">${highlight(c.personality.substring(0,80),q)}${c.personality.length>80?'...':''}</p>` : ''}
+        ${c.ability ? `<div class="flex items-center gap-1.5 text-xs mb-2" style="color:${c.color}">
+          <span class="mat-icon text-sm">bolt</span>
+          <span class="truncate">${highlight(c.ability.substring(0,40),q)}${c.ability.length>40?'...':''}</span>
+        </div>` : ''}
+        ${tagsHtml ? `<div class="flex flex-wrap gap-1">${tagsHtml}</div>` : ''}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+};
+
+function highlight(text, q) {
+  if (!q || !text) return text || '';
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return String(text).replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+}
+
+// ─── Search ──────────────────────────────
+window.onSearch = function(v) {
+  state.search = v;
+  document.getElementById('search-clear').classList.toggle('hidden', !v);
+  applyRender();
+};
+window.clearSearch = function() {
+  document.getElementById('search-input').value = '';
+  state.search = '';
+  document.getElementById('search-clear').classList.add('hidden');
+  applyRender();
+};
+
+// ─── Filter ──────────────────────────────
+window.setFilter = function(f) {
+  state.filter = f;
+  document.querySelectorAll('.filter-pill').forEach(b => {
+    b.classList.toggle('active', b.dataset.f === f);
+  });
+  applyRender();
+};
+
+// ─── Detail Panel ──────────────────────────────
+window.openDetail = function(id) {
+  const c = window.appChars.find(c => c.id === id);
+  if (!c) return;
+  state.selectedId = id;
+  applyRender();
+
+  const content = document.getElementById('detail-content');
+  const relHtml = (c.relations||[]).map(r => `
+    <div class="relation-row">
+      <div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background:#7c50ff40">${r.name[0]}</div>
+      <div class="flex-1">
+        <p class="text-sm text-white">${r.name}</p>
+        <p class="text-xs" style="color:#9e9aaa">${r.type}</p>
+      </div>
+    </div>
+  `).join('');
+
+  content.innerHTML = `
+    <div class="flex items-center gap-4 mb-6">
+      <div class="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold" style="background:${c.color};box-shadow:0 0 24px ${c.color}50">${c.name[0]}</div>
+      <div>
+        <h2 class="text-xl font-display font-bold text-white">${c.name}</h2>
+        <p class="text-sm" style="color:#9e9aaa">${c.role} ${c.firstChap?'· 첫 등장 '+c.firstChap:''}</p>
+        ${c.archetype?`<span class="text-xs px-2 py-0.5 rounded-full inline-block mt-1" style="background:${ROLE_COLORS[c.role]||'rgba(94,91,104,0.2)'};color:${ROLE_TEXT[c.role]||'#9e9aaa'}">${c.archetype}</span>`:''}
+      </div>
+    </div>
+    ${section('외모 & 특이사항', c.appearance, 'face')}
+    ${section('성격 & 내면 세계', c.personality, 'psychology')}
+    ${section('능력 & 기술', c.ability, 'bolt')}
+    ${section('과거사 & 배경', c.backstory, 'history')}
+    ${(c.tags||[]).length ? `<div class="mb-4"><p class="text-xs uppercase tracking-wider mb-2" style="color:#5e5b68">키워드</p><div class="flex flex-wrap gap-1.5">${c.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>` : ''}
+    ${relHtml ? `<div class="mb-4"><p class="text-xs uppercase tracking-wider mb-2" style="color:#5e5b68">인물 관계</p>${relHtml}</div>` : ''}
+    ${c.memo ? `<div class="p-3 rounded-xl" style="background:rgba(232,88,122,0.06);border:1px solid rgba(232,88,122,0.15)"><p class="text-xs uppercase tracking-wider mb-1" style="color:#e8587a">작가 메모</p><p class="text-sm" style="color:#eae6f4;line-height:1.7">${c.memo}</p></div>` : ''}
+  `;
+
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('detail-overlay').classList.add('open');
+};
+
+function section(label, text, icon) {
+  if (!text) return '';
+  return `<div class="mb-4">
+    <p class="text-xs uppercase tracking-wider mb-1.5 flex items-center gap-1" style="color:#5e5b68">
+      <span class="mat-icon text-sm">${icon}</span>${label}
+    </p>
+    <p class="text-sm leading-relaxed" style="color:#eae6f4;line-height:1.75">${text}</p>
+  </div>`;
+}
+
+window.closeDetail = function() {
+  state.selectedId = null;
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('detail-overlay').classList.remove('open');
+  applyRender();
+};
+
+window.editFromDetail = function() {
+  closeDetail();
+  openFormDrawer(state.selectedId || (window.appChars.length ? window.appChars[0].id : null));
+};
+
+// ─── Form Drawer ──────────────────────────────
+window.openFormDrawer = function(id) {
+  state.editId = id;
+  formTags = [];
+  formRelations = [];
+  document.getElementById('form-title').textContent = id ? '캐릭터 수정' : '새 캐릭터 추가';
+  document.getElementById('delete-btn').classList.toggle('hidden', !id);
+  document.getElementById('edit-id').value = id || '';
+
+  // Reset
+  ['f-name','f-role','f-archetype','f-firstchap','f-appearance','f-personality','f-ability','f-backstory','f-memo'].forEach(fid => {
+    const el = document.getElementById(fid);
+    if (el) el.value = '';
+  });
+  document.getElementById('tags-container').innerHTML = '';
+  document.getElementById('relations-container').innerHTML = '';
+  document.getElementById('avatar-preview').textContent = '?';
+  document.getElementById('avatar-preview').style.background = '#7c50ff';
+
+  if (id) {
+    const c = window.appChars.find(c => c.id === id);
+    if (c) {
+      document.getElementById('f-name').value = c.name || '';
+      document.getElementById('f-role').value = c.role || '주인공';
+      document.getElementById('f-archetype').value = c.archetype || '';
+      document.getElementById('f-firstchap').value = c.firstChap || '';
+      document.getElementById('f-appearance').value = c.appearance || '';
+      document.getElementById('f-personality').value = c.personality || '';
+      document.getElementById('f-ability').value = c.ability || '';
+      document.getElementById('f-backstory').value = c.backstory || '';
+      document.getElementById('f-memo').value = c.memo || '';
+      formTags = [...(c.tags || [])];
+      formRelations = [...(c.relations || [])];
+      renderTags(); renderRelations();
+      updatePreview(c.name);
+      document.getElementById('avatar-preview').style.background = c.color;
+    }
+  }
+  document.getElementById('form-drawer').classList.add('open');
+};
+
+window.closeFormDrawer = function() {
+  document.getElementById('form-drawer').classList.remove('open');
+  state.editId = null;
+};
+
+window.updatePreview = function(name) {
+  const el = document.getElementById('avatar-preview');
+  if (name) {
+    el.textContent = name[0];
+    const color = COLORS[(name.charCodeAt(0) + name.length) % COLORS.length];
+    el.style.background = color;
+  } else {
+    el.textContent = '?';
+    el.style.background = '#7c50ff';
+  }
+};
+
+// Tags
+window.addTag = function() {
+  const inp = document.getElementById('tag-input');
+  const v = inp.value.trim();
+  if (!v || formTags.includes(v)) { inp.value = ''; return; }
+  formTags.push(v);
+  inp.value = '';
+  renderTags();
+};
+function renderTags() {
+  document.getElementById('tags-container').innerHTML = formTags.map((t,i) => `
+    <span class="tag">${t}<button onclick="removeTag(${i})" class="mat-icon" style="font-size:14px;line-height:1">close</button></span>
+  `).join('');
+}
+window.removeTag = function(i) { formTags.splice(i,1); renderTags(); };
+
+// Relations
+window.addRelation = function() {
+  formRelations.push({ name:'', type:'' });
+  renderRelations();
+};
+function renderRelations() {
+  document.getElementById('relations-container').innerHTML = formRelations.map((r,i) => `
+    <div class="relation-row">
+      <div class="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs" style="background:#7c50ff40">${r.name?r.name[0]:'?'}</div>
+      <input type="text" placeholder="이름" value="${r.name||''}" class="inp flex-1" style="padding:6px 10px;font-size:13px" oninput="formRelations[${i}].name=this.value;renderRelations()"/>
+      <input type="text" placeholder="관계 (친구, 앙숙...)" value="${r.type||''}" class="inp flex-1" style="padding:6px 10px;font-size:13px" oninput="formRelations[${i}].type=this.value"/>
+      <button onclick="formRelations.splice(${i},1);renderRelations()" class="mat-icon text-base" style="color:#e8587a">remove_circle</button>
+    </div>
+  `).join('');
+}
+
+window.saveChar = async function() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { document.getElementById('f-name').focus(); return; }
+
+  const id = document.getElementById('edit-id').value;
+  const color = id ? (window.appChars.find(c=>c.id===id)?.color || COLORS[0]) : COLORS[(window.appChars?.length||0) % COLORS.length];
+
+  const char = {
+    name, color,
+    role: document.getElementById('f-role').value,
+    archetype: document.getElementById('f-archetype').value,
+    firstChap: document.getElementById('f-firstchap').value,
+    appearance: document.getElementById('f-appearance').value,
+    personality: document.getElementById('f-personality').value,
+    ability: document.getElementById('f-ability').value,
+    backstory: document.getElementById('f-backstory').value,
+    memo: document.getElementById('f-memo').value,
+    tags: formTags,
+    relations: formRelations,
+    createdAt: id ? (window.appChars.find(c=>c.id===id)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+  };
+
+  let savedId = id;
+  if (window.saveCharDb) savedId = await window.saveCharDb({ ...char, id }) || id;
+
+  if (!window.appChars) window.appChars = [];
+  if (id) {
+    const idx = window.appChars.findIndex(c => c.id === id);
+    if (idx > -1) window.appChars[idx] = { ...char, id };
+    else window.appChars.push({ ...char, id: savedId || ('local-'+Date.now()) });
+  } else {
+    window.appChars.push({ ...char, id: savedId || ('local-'+Date.now()) });
+  }
+
+  closeFormDrawer();
+  applyRender();
+};
+
+window.deleteChar = async function() {
+  const id = document.getElementById('edit-id').value;
+  if (!id) return;
+  if (!confirm('이 캐릭터를 삭제할까요?')) return;
+  if (window.deleteCharDb) await window.deleteCharDb(id);
+  window.appChars = window.appChars.filter(c => c.id !== id);
+  closeFormDrawer();
+  applyRender();
+};
+
+window.line_clamp = {};
 </script>
+
+<style>
+.line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+mark.search-highlight { background:rgba(124,80,255,0.25); border-radius:2px; color:inherit; }
+</style>
+
 </body>
 </html>

@@ -3,84 +3,102 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>StoryVital — 작가를 위한 스마트 설정 관리</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<title>StoryVital — 웹소설 작가의 워크스페이스</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&family=Noto+Serif+KR:wght@300;400;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, collection, addDoc, getDocs, doc, query, where, onSnapshot, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-  import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-  // [EMERGENCY FIX] Hardcoded firebase config for production
-  const firebaseConfig = {
-    apiKey: "AIzaSyBEkQmeFG8XGxNuYDZof_3_9oOS4cEMOyk",
-    authDomain: "story-vital.firebaseapp.com",
-    projectId: "story-vital",
-    storageBucket: "story-vital.firebasestorage.app",
-    messagingSenderId: "872952700994",
-    appId: "1:872952700994:web:efa41cd38cd491fe5ccddb"
-  };
+  import { firebaseConfig } from './firebase-config.js';
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
+  let app, db, auth;
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
-  // Initialize global data object immediately to avoid reference errors
-  window.appData = {
-    works: [],
-    activeWorkId: localStorage.getItem('sv_activeWork') || null,
-    todayChars: parseInt(localStorage.getItem('sv_todayChars') || '0'),
-    dailyGoal: 5000,
-    user: null
-  };
+    window.signInWithGoogle = async () => {
+      try { await signInWithPopup(auth, provider); }
+      catch(e) { loadDemoMode(); }
+    };
+    window.signOutUser = async () => { await signOut(auth); location.reload(); };
 
-  // Auth Guard - Highest Priority
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      window.appData.user = user;
-      const projectsRef = collection(db, 'projects');
-      const q = query(projectsRef, where('userId', '==', user.uid));
-      
-      onSnapshot(q, (snapshot) => {
-        const projects = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.appData.works = projects;
-        
-        if (projects.length === 0) {
-          showOnboarding();
-        } else {
-          if (!window.appData.activeWorkId || !projects.find(p => p.id === window.appData.activeWorkId)) {
-            window.appData.activeWorkId = projects[0].id;
-            localStorage.setItem('sv_activeWork', projects[0].id);
-          }
-          showApp(user);
-          renderDashboard();
-        }
-      });
-    } else {
-      showAuth();
-    }
-  });
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        window.currentUser = user;
+        showApp(user);
+        await loadUserData(user.uid);
+      } else {
+        showAuth();
+      }
+    });
+  } catch(e) { /* Firebase not configured */ }
 
-  window.loginGoogle = async () => {
-    try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e) { console.error(e); }
-  };
-
-  window.signOutUser = () => signOut(auth);
-
-  window.saveWork = async (work) => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return null;
+  async function loadUserData(uid) {
     try {
-      const docRef = await addDoc(collection(db, 'projects'), { ...work, userId: uid });
+      // Load works (projects)
+      const q = query(collection(db, 'projects'), where('userId', '==', uid));
+      const worksSnap = await getDocs(q);
+      const works = worksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Load today's writing stat
+      const today = new Date().toISOString().split('T')[0];
+      const statDoc = await getDoc(doc(db, 'users', uid, 'stats', today));
+      const todayStat = statDoc.exists() ? statDoc.data() : { chars: 0 };
+
+      // Load streak
+      const statsSnap = await getDocs(collection(db, 'users', uid, 'stats'));
+      const allStats = statsSnap.docs.map(d => ({ date: d.id, ...d.data() }));
+
+      window.appData.works = works;
+      window.appData.todayChars = todayStat.chars || 0;
+      window.appData.allStats = allStats;
+
+      if (!works.length) {
+        showOnboarding();
+      } else {
+        if (!window.appData.activeWorkId) window.appData.activeWorkId = works[0].id;
+        renderDashboard();
+      }
+
+      // Load threads for unresolved count
+      if (window.appData.activeWorkId) {
+        const qThreads = query(collection(db, 'timeline_events'), where('userId', '==', uid), where('projectId', '==', window.appData.activeWorkId), where('type', '==', 'thread'));
+        const threadsSnap = await getDocs(qThreads);
+        const threads = threadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        window.appData.threads = threads;
+        renderUnresolved();
+      }
+    } catch(e) { loadDemoMode(); }
+  }
+
+  window.saveWork = async function(work) {
+    if (!window.currentUser || !db) return null;
+    try {
+      const workData = { ...work, userId: window.currentUser.uid, createdAt: new Date().toISOString() };
+      const ref = collection(db, 'projects');
+      const docRef = await addDoc(ref, workData);
       return docRef.id;
-    } catch(e) { console.error(e); return null; }
+    } catch(e) { return null; }
   };
 
-  // Expose methods for UI
+  window.recordWriting = async function(chars) {
+    if (!window.currentUser || !db) return;
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      await setDoc(doc(db, 'users', window.currentUser.uid, 'stats', today), { chars, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch(e) {}
+  };
+
   window.db = db;
   window.auth = auth;
+  window.collection = collection;
+  window.addDoc = addDoc;
 </script>
 
 <script>
@@ -89,23 +107,16 @@
     theme: {
       extend: {
         colors: {
-          surface: '#09090d',
-          'surface-low': '#0e0e13',
-          'surface-mid': '#141419',
-          'surface-high': '#1a1a21',
-          'surface-bright': '#22222b',
-          primary: '#b8a2ff',
-          'primary-dim': '#7c50ff',
-          secondary: '#c490ff',
-          'secondary-dim': '#9d60f0',
-          tertiary: '#ff9bbf',
-          'tertiary-dim': '#e8587a',
+          surface: '#09090d', 'surface-low': '#0e0e13', 'surface-mid': '#141419',
+          'surface-high': '#1a1a21', 'surface-bright': '#22222b',
+          primary: '#b8a2ff', 'primary-dim': '#7c50ff', 'primary-container': '#3d1f9e',
+          secondary: '#c490ff', 'secondary-dim': '#9d60f0',
+          tertiary: '#ff9bbf', 'tertiary-dim': '#e8587a',
           success: '#40d0a8',
-          outline: '#5e5b68',
-          'on-surface': '#eae6f4',
-          'on-surface-variant': '#9e9aaa'
+          outline: '#5e5b68', 'outline-variant': '#36333f',
+          'on-surface': '#eae6f4', 'on-surface-variant': '#9e9aaa',
         },
-        fontFamily: { display: ['Manrope', 'sans-serif'] }
+        fontFamily: { display: ['Manrope','sans-serif'], serif: ['Noto Serif KR','serif'] }
       }
     }
   };
@@ -113,66 +124,171 @@
 
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-.mat-icon { font-family: 'Material Symbols Outlined'; font-style: normal; user-select: none; line-height: 1; vertical-align: middle; }
+.mat-icon { font-family: 'Material Symbols Outlined'; font-style: normal; user-select: none; line-height: 1; }
 body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; overflow-x: hidden; }
+
+/* Glass */
 .glass { background: rgba(20,20,25,0.7); backdrop-filter: blur(20px); border: 1px solid rgba(184,162,255,0.09); }
 .glass-bright { background: rgba(26,26,33,0.85); backdrop-filter: blur(24px); border: 1px solid rgba(184,162,255,0.12); }
-.card-glow:hover { box-shadow: 0 12px 32px rgba(124,80,255,0.15); border-color: rgba(124,80,255,0.3); }
-.glow-primary { box-shadow: 0 0 20px rgba(124,80,255,0.4); }
-.nav-link { color: #9e9aaa; transition: color 0.15s; cursor: pointer; }
+
+/* Glow */
+.glow-primary { box-shadow: 0 0 24px rgba(124,80,255,0.35), 0 0 60px rgba(124,80,255,0.1); }
+.text-glow { text-shadow: 0 0 40px rgba(184,162,255,0.45); }
+.card-glow:hover { box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 20px rgba(124,80,255,0.1); }
+
+/* Nav */
+.nav-link { color: #9e9aaa; transition: color 0.15s; }
 .nav-link:hover { color: #eae6f4; }
 .nav-active { color: #b8a2ff !important; }
-.sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #9e9aaa; font-size: 14px; transition: all 0.15s; cursor: pointer; text-decoration: none; }
+.sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #9e9aaa; font-size: 14px; transition: all 0.15s; cursor: pointer; }
 .sidebar-item:hover { background: rgba(255,255,255,0.04); color: #eae6f4; }
 .sidebar-active { background: rgba(124,80,255,0.15); color: #b8a2ff; border-left: 2px solid #7c50ff; padding-left: 10px; }
-.inp { background: rgba(0,0,0,0.6); border: 1px solid rgba(184,162,255,0.1); border-radius: 10px; padding: 10px 14px; color: #eae6f4; font-size: 14px; width: 100%; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-.inp:focus { border-color: #7c50ff; box-shadow: 0 0 0 3px rgba(124,80,255,0.15); }
-.badge { padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-.badge-writing { background: rgba(64,208,168,0.15); color: #40d0a8; }
-.badge-plan { background: rgba(184,162,255,0.15); color: #b8a2ff; }
-.badge-done { background: rgba(232,88,122,0.15); color: #e8587a; }
-.progress-track { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden; }
-.progress-fill { height: 100%; border-radius: 3px; background: #7c50ff; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
-.modal-bg { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; }
+
+/* Work switcher dropdown */
 .work-switcher { position: relative; }
-.work-dropdown { position: absolute; top: 110%; right: 0; width: 220px; background: #1a1a21; border: 1px solid rgba(184,162,255,0.15); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 150; visibility: hidden; opacity: 0; transform: translateY(-10px); transition: all 0.2s; }
-.work-dropdown.open { visibility: visible; opacity: 1; transform: translateY(0); }
-.work-option { padding: 10px 14px; cursor: pointer; transition: background 0.15s; border-radius: 8px; margin: 4px; }
-.work-option:hover { background: rgba(255,255,255,0.04); }
-.work-option.active { background: rgba(124,80,255,0.1); }
+.work-dropdown { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 200;
+  background: #1a1a21; border: 1px solid rgba(184,162,255,0.15); border-radius: 12px;
+  overflow: hidden; display: none; }
+.work-dropdown.open { display: block; }
+.work-option { padding: 10px 14px; font-size: 13px; cursor: pointer; transition: background 0.1s; }
+.work-option:hover { background: rgba(124,80,255,0.1); }
+.work-option.active { color: #b8a2ff; }
 
-@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-.fade-up { animation: fadeUp 0.5s ease forwards; }
+/* Streak calendar */
+.streak-cell { width: 14px; height: 14px; border-radius: 3px; background: rgba(255,255,255,0.04); transition: background 0.2s; cursor: default; }
+.streak-cell.active { background: #7c50ff; box-shadow: 0 0 6px rgba(124,80,255,0.5); }
+.streak-cell.today { border: 1px solid #b8a2ff; }
+.streak-cell.partial { background: rgba(124,80,255,0.35); }
 
+/* Progress bar */
+.progress-track { height: 4px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #7c50ff, #b8a2ff); box-shadow: 0 0 8px rgba(124,80,255,0.5); transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+
+/* Cards */
+.work-card { border: 1px solid rgba(184,162,255,0.08); border-radius: 14px; overflow: hidden; transition: transform 0.25s ease, box-shadow 0.25s ease; cursor: pointer; }
+.work-card:hover { transform: translateY(-5px); }
+
+/* Input */
+.inp { background: rgba(0,0,0,0.6); border: 1px solid rgba(184,162,255,0.1); border-radius: 10px; padding: 10px 14px; color: #eae6f4; font-size: 14px; width: 100%; outline: none; transition: border-color 0.2s, box-shadow 0.2s; font-family: 'Manrope', sans-serif; }
+.inp:focus { border-color: #7c50ff; box-shadow: 0 0 0 3px rgba(124,80,255,0.15); }
+.inp::placeholder { color: #5e5b68; }
+select.inp option { background: #1a1a21; }
+
+/* Badges */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge-draft { background: rgba(124,80,255,0.18); color: #b8a2ff; border: 1px solid rgba(124,80,255,0.3); }
+.badge-writing { background: rgba(64,208,168,0.15); color: #40d0a8; border: 1px solid rgba(64,208,168,0.3); }
+.badge-plan { background: rgba(255,155,191,0.12); color: #ff9bbf; border: 1px solid rgba(255,155,191,0.25); }
+.badge-done { background: rgba(157,96,240,0.15); color: #c490ff; border: 1px solid rgba(157,96,240,0.3); }
+
+/* Thread item */
+.thread-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; background: rgba(232,88,122,0.06); border: 1px solid rgba(232,88,122,0.12); margin-bottom: 6px; }
+
+/* Animations */
+@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes slideDown { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+.fade-up { animation: fadeUp 0.45s ease forwards; }
+.fade-in { animation: fadeIn 0.3s ease forwards; }
+.d1 { animation-delay: 0.05s; opacity:0; }
+.d2 { animation-delay: 0.12s; opacity:0; }
+.d3 { animation-delay: 0.2s; opacity:0; }
+.d4 { animation-delay: 0.28s; opacity:0; }
+
+/* Mobile sidebar drawer */
+.mobile-drawer { position: fixed; left: -280px; top: 0; bottom: 0; width: 280px; z-index: 200; transition: left 0.3s cubic-bezier(0.4,0,0.2,1); background: #0e0e13; border-right: 1px solid rgba(184,162,255,0.08); }
+.mobile-drawer.open { left: 0; }
+.drawer-overlay { position: fixed; inset: 0; z-index: 199; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); display: none; }
+.drawer-overlay.open { display: block; }
+
+/* Modal */
+.modal-bg { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 16px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(184,162,255,0.18); border-radius: 4px; }
+
+/* Sidebar width */
 @media (min-width: 1024px) { .sidebar-desktop { display: flex; } .ml-sidebar { margin-left: 224px; } }
 @media (max-width: 1023px) { .sidebar-desktop { display: none; } .ml-sidebar { margin-left: 0; } }
+
+/* Onboarding step indicator */
+.step-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.1); transition: all 0.3s; }
+.step-dot.active { background: #7c50ff; width: 24px; border-radius: 4px; }
+.step-dot.done { background: #40d0a8; }
 </style>
 </head>
 
 <body>
 
 <!-- ═══════ AUTH SCREEN ═══════ -->
-<div id="auth-screen" class="min-h-screen flex items-center justify-center p-6 hidden">
-  <div class="glass-bright p-10 rounded-3xl w-full max-w-md text-center fade-up">
-    <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style="background: linear-gradient(135deg, #7c50ff, #b8a2ff)">
-      <span class="mat-icon text-white" style="font-size:32px">auto_stories</span>
+<div id="auth-screen" class="min-h-screen flex items-center justify-center relative">
+  <div class="absolute inset-0 overflow-hidden">
+    <div class="absolute top-1/3 left-1/4 w-[500px] h-[500px] rounded-full opacity-[0.07]" style="background: radial-gradient(circle, #7c50ff, transparent)"></div>
+    <div class="absolute bottom-1/4 right-1/3 w-[300px] h-[300px] rounded-full opacity-[0.05]" style="background: radial-gradient(circle, #e8587a, transparent)"></div>
+    <!-- Floating particles -->
+    <div class="absolute" style="top:15%;left:10%;width:2px;height:2px;background:#7c50ff;border-radius:50%;animation:pulse 3s ease-in-out infinite;box-shadow:0 0 6px #7c50ff"></div>
+    <div class="absolute" style="top:70%;right:15%;width:2px;height:2px;background:#e8587a;border-radius:50%;animation:pulse 4s ease-in-out infinite 1s;box-shadow:0 0 6px #e8587a"></div>
+    <div class="absolute" style="top:40%;right:8%;width:1.5px;height:1.5px;background:#40d0a8;border-radius:50%;animation:pulse 2.5s ease-in-out infinite 0.5s;box-shadow:0 0 6px #40d0a8"></div>
+  </div>
+
+  <div class="relative z-10 w-full max-w-sm mx-auto px-6">
+    <!-- Logo -->
+    <div class="text-center mb-10 fade-up">
+      <div class="inline-flex items-center gap-2 mb-6">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, #7c50ff, #b8a2ff)">
+          <span class="mat-icon text-white" style="font-size:20px">auto_stories</span>
+        </div>
+        <span class="text-2xl font-display font-extrabold text-white">StoryVital</span>
+      </div>
+      <h1 class="text-3xl font-display font-extrabold text-white text-glow leading-tight mb-3">
+        당신의 연재,<br/>더 이상 잊지 마세요
+      </h1>
+      <p class="text-sm leading-relaxed" style="color:#9e9aaa">
+        복선, 캐릭터, 연재 설정을 한 곳에서.<br/>웹소설 작가만을 위한 워크스페이스.
+      </p>
     </div>
-    <h1 class="text-3xl font-display font-extrabold text-white mb-2">StoryVital</h1>
-    <p class="text-sm mb-8" style="color: #9e9aaa">작가를 위한 가장 우아한 설정 관리 도구</p>
-    <button onclick="loginGoogle()" class="w-full flex items-center justify-center gap-3 bg-white text-black py-3.5 rounded-xl font-bold transition-transform active:scale-95 mb-4">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/layout/google.svg" width="18" alt=""/>
-      Google로 시작하기
-    </button>
+
+    <!-- Auth card -->
+    <div class="glass-bright rounded-2xl p-6 fade-up d1">
+      <button onclick="window.signInWithGoogle ? window.signInWithGoogle() : loadDemoMode()"
+        class="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-semibold rounded-xl py-3.5 hover:bg-gray-50 active:scale-[0.98] transition-all mb-3" style="font-size:14px">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Google로 시작하기
+      </button>
+      <button onclick="loadDemoMode()" class="w-full text-center text-sm py-2 transition-colors" style="color:#9e9aaa" onmouseover="this.style.color='#eae6f4'" onmouseout="this.style.color='#9e9aaa'">
+        로그인 없이 체험하기 →
+      </button>
+    </div>
+
+    <!-- Value props -->
+    <div class="mt-8 grid grid-cols-3 gap-3 fade-up d2">
+      <div class="glass rounded-xl p-3 text-center">
+        <div class="text-xl font-display font-extrabold text-white mb-0.5">무료</div>
+        <div class="text-xs" style="color:#9e9aaa">1작품</div>
+      </div>
+      <div class="glass rounded-xl p-3 text-center">
+        <div class="text-xl font-display font-extrabold" style="color:#b8a2ff">₩4,900</div>
+        <div class="text-xs" style="color:#9e9aaa">Pro 무제한</div>
+      </div>
+      <div class="glass rounded-xl p-3 text-center">
+        <div class="text-xl font-display font-extrabold text-white mb-0.5">0원</div>
+        <div class="text-xs" style="color:#9e9aaa">서버비용</div>
+      </div>
+    </div>
   </div>
 </div>
 
 <!-- ═══════ ONBOARDING ═══════ -->
-<div id="onboarding-screen" class="min-h-screen flex items-center justify-center p-6 bg-[#09090d] hidden">
-  <div class="w-full max-w-md">
-    <div class="flex justify-center gap-2 mb-8">
-      <div id="sdot-1" class="w-2 h-2 rounded-full active" style="background:#5e5b68"></div>
-      <div id="sdot-2" class="w-2 h-2 rounded-full" style="background:#5e5b68"></div>
-      <div id="sdot-3" class="w-2 h-2 rounded-full" style="background:#5e5b68"></div>
+<div id="onboarding-screen" class="hidden min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-lg">
+    <!-- Step indicators -->
+    <div class="flex items-center justify-center gap-2 mb-8">
+      <div class="step-dot active" id="sdot-1"></div>
+      <div class="step-dot" id="sdot-2"></div>
+      <div class="step-dot" id="sdot-3"></div>
     </div>
 
     <!-- Step 1: Welcome -->
@@ -181,12 +297,33 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
         <span class="mat-icon text-white" style="font-size:28px">auto_stories</span>
       </div>
       <h2 class="text-2xl font-display font-extrabold text-white mb-3">환영합니다, 작가님!</h2>
-      <button onclick="goObStep(2)" class="w-full py-3 rounded-xl font-semibold text-white text-sm glow-primary" style="background: #7c50ff"> 시작하기 → </button>
+      <p class="text-sm leading-relaxed mb-6" style="color:#9e9aaa">
+        StoryVital은 웹소설 연재 작가를 위한 설정 관리 도구입니다.<br/>
+        처음 방문이시군요. 빠르게 시작할 수 있도록 안내해드릴게요.
+      </p>
+      <div class="space-y-3 text-left mb-6">
+        <div class="flex items-center gap-3 p-3 rounded-xl" style="background: rgba(124,80,255,0.08); border: 1px solid rgba(124,80,255,0.15)">
+          <span class="mat-icon text-2xl" style="color:#b8a2ff">group</span>
+          <div><p class="text-sm font-semibold text-white">캐릭터 DB</p><p class="text-xs" style="color:#9e9aaa">외모·성격·능력·관계 한 번에 관리</p></div>
+        </div>
+        <div class="flex items-center gap-3 p-3 rounded-xl" style="background: rgba(232,88,122,0.07); border: 1px solid rgba(232,88,122,0.15)">
+          <span class="mat-icon text-2xl" style="color:#ff9bbf">commit</span>
+          <div><p class="text-sm font-semibold text-white">복선 트래커</p><p class="text-xs" style="color:#9e9aaa">투척한 복선을 절대 잊지 않도록</p></div>
+        </div>
+        <div class="flex items-center gap-3 p-3 rounded-xl" style="background: rgba(64,208,168,0.07); border: 1px solid rgba(64,208,168,0.15)">
+          <span class="mat-icon text-2xl" style="color:#40d0a8">upload_file</span>
+          <div><p class="text-sm font-semibold text-white">플랫폼 내보내기</p><p class="text-xs" style="color:#9e9aaa">문피아·네이버·카카오 맞춤 변환</p></div>
+        </div>
+      </div>
+      <button onclick="goObStep(2)" class="w-full py-3 rounded-xl font-semibold text-white text-sm glow-primary" style="background: #7c50ff">
+        시작하기 →
+      </button>
     </div>
 
     <!-- Step 2: Create first work -->
     <div id="ob-step-2" class="hidden glass-bright rounded-2xl p-8 fade-in">
       <h2 class="text-xl font-display font-extrabold text-white mb-1">첫 작품을 만들어볼까요?</h2>
+      <p class="text-sm mb-6" style="color:#9e9aaa">나중에 언제든 수정하거나 추가할 수 있어요.</p>
       <div class="space-y-4">
         <div>
           <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">작품 제목 *</label>
@@ -214,11 +351,25 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
             </select>
           </div>
         </div>
+        <div>
+          <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">연재 플랫폼</label>
+          <div class="flex flex-wrap gap-2" id="ob-platforms">
+            <button onclick="toggleObPlatform(this,'문피아')" class="ob-plat text-xs px-3 py-1.5 rounded-full transition-all" style="border:1px solid rgba(184,162,255,0.2);color:#9e9aaa">문피아</button>
+            <button onclick="toggleObPlatform(this,'네이버 시리즈')" class="ob-plat text-xs px-3 py-1.5 rounded-full transition-all" style="border:1px solid rgba(184,162,255,0.2);color:#9e9aaa">네이버 시리즈</button>
+            <button onclick="toggleObPlatform(this,'카카오페이지')" class="ob-plat text-xs px-3 py-1.5 rounded-full transition-all" style="border:1px solid rgba(184,162,255,0.2);color:#9e9aaa">카카오페이지</button>
+            <button onclick="toggleObPlatform(this,'조아라')" class="ob-plat text-xs px-3 py-1.5 rounded-full transition-all" style="border:1px solid rgba(184,162,255,0.2);color:#9e9aaa">조아라</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">일일 목표 (자)</label>
+          <input id="ob-daily-goal" type="number" placeholder="5000" class="inp"/>
+        </div>
       </div>
       <div class="flex gap-3 mt-6">
         <button onclick="goObStep(1)" class="flex-1 py-3 rounded-xl text-sm" style="border:1px solid rgba(184,162,255,0.15);color:#9e9aaa">이전</button>
-        <button onclick="finishOnboarding()" id="ob-finish-btn" class="flex-1 py-3 rounded-xl font-semibold text-white text-sm" style="background:#7c50ff">작품 만들기 →</button>
+        <button onclick="finishOnboarding()" class="flex-1 py-3 rounded-xl font-semibold text-white text-sm" style="background:#7c50ff">작품 만들기 →</button>
       </div>
+      <button onclick="skipOnboarding()" class="w-full text-center text-xs mt-3" style="color:#5e5b68">건너뛰기</button>
     </div>
 
     <!-- Step 3: Done -->
@@ -227,7 +378,10 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
         <span class="mat-icon" style="font-size:28px;color:#40d0a8">check</span>
       </div>
       <h2 class="text-xl font-display font-extrabold text-white mb-2">준비 완료!</h2>
-      <button onclick="enterApp()" class="w-full py-3 rounded-xl font-semibold text-white text-sm glow-primary" style="background:#7c50ff"> 대시보드로 → </button>
+      <p class="text-sm mb-6" style="color:#9e9aaa">작품이 생성됐어요. 이제 캐릭터를 추가하거나 챕터를 기록해보세요.</p>
+      <button onclick="enterApp()" class="w-full py-3 rounded-xl font-semibold text-white text-sm glow-primary" style="background:#7c50ff">
+        대시보드로 →
+      </button>
     </div>
   </div>
 </div>
@@ -238,12 +392,16 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
   <!-- TOP NAV -->
   <nav class="fixed top-0 left-0 right-0 z-[100] h-16 glass-bright flex items-center justify-between px-4 lg:px-6">
     <div class="flex items-center gap-3">
+      <!-- Mobile menu button -->
+      <button class="lg:hidden mat-icon text-xl" style="color:#9e9aaa" onclick="toggleMobileDrawer()">menu</button>
+      <!-- Logo -->
       <a href="index.html" class="flex items-center gap-2">
         <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#7c50ff,#b8a2ff)">
           <span class="mat-icon text-white" style="font-size:14px">auto_stories</span>
         </div>
         <span class="font-display font-extrabold text-white text-base hidden sm:block">StoryVital</span>
       </a>
+      <!-- Desktop nav -->
       <div class="hidden lg:flex items-center gap-5 ml-4" style="font-size:14px">
         <a href="index.html" class="nav-active font-semibold">대시보드</a>
         <a href="characters.html" class="nav-link">캐릭터</a>
@@ -257,27 +415,52 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
       <div class="work-switcher" id="work-switcher">
         <button onclick="toggleWorkDropdown()" class="flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all" style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,162,255,0.12)">
           <span class="mat-icon text-sm" style="color:#b8a2ff;font-size:16px">book</span>
-          <span id="active-work-name" class="font-semibold text-white max-w-[120px] truncate hidden sm:block">작품 선택</span>
+          <span id="active-work-name" class="font-semibold text-white max-w-[120px] truncate hidden sm:block">작품 로딩중...</span>
           <span class="mat-icon text-sm" style="color:#9e9aaa;font-size:16px" id="switcher-arrow">expand_more</span>
         </button>
-        <div id="work-dropdown" class="work-dropdown">
+        <div id="work-dropdown" class="work-dropdown" style="min-width:200px">
           <div id="work-dropdown-list" class="py-1"></div>
           <div style="border-top:1px solid rgba(184,162,255,0.1)" class="p-2">
-            <button onclick="openNewWorkModal()" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all" style="color:#9e9aaa">
+            <button onclick="openNewWorkModal()" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all" style="color:#9e9aaa" onmouseover="this.style.background='rgba(124,80,255,0.1)'" onmouseout="this.style.background=''">
               <span class="mat-icon text-base">add</span>새 작품 추가
             </button>
           </div>
         </div>
       </div>
-      <img id="user-avatar" src="" alt="" class="w-8 h-8 rounded-full object-cover cursor-pointer" onclick="signOutUser()"/>
+
+      <button class="mat-icon nav-link relative" style="font-size:20px" onclick="toggleNotifs()">notifications
+        <span class="absolute top-0 right-0 w-2 h-2 rounded-full" style="background:#e8587a;display:none" id="notif-dot"></span>
+      </button>
+      <img id="user-avatar" src="" alt="" class="w-8 h-8 rounded-full object-cover cursor-pointer" style="border:1px solid rgba(124,80,255,0.4)" onclick="window.signOutUser && window.signOutUser()"/>
     </div>
   </nav>
 
-  <!-- SIDEBAR -->
+  <!-- MOBILE DRAWER OVERLAY -->
+  <div class="drawer-overlay" id="drawer-overlay" onclick="toggleMobileDrawer()"></div>
+
+  <!-- MOBILE DRAWER -->
+  <div class="mobile-drawer pt-6 flex flex-col" id="mobile-drawer">
+    <div class="px-5 mb-6 mt-16">
+      <p class="text-xs uppercase tracking-widest mb-1" style="color:#5e5b68">현재 작품</p>
+      <p class="font-display font-bold text-white text-sm" id="mobile-work-name">-</p>
+    </div>
+    <nav class="flex-1 px-3 space-y-1">
+      <a href="index.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
+      <a href="characters.html" class="sidebar-item"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
+      <a href="chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
+      <a href="export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
+    </nav>
+    <div class="px-3 pb-6">
+      <button onclick="window.signOutUser && window.signOutUser()" class="sidebar-item w-full"><span class="mat-icon text-lg">logout</span>로그아웃</button>
+    </div>
+  </div>
+
+  <!-- DESKTOP SIDEBAR -->
   <aside class="sidebar-desktop fixed left-0 top-16 bottom-0 w-56 flex-col py-5 z-50" style="background:#0e0e13;border-right:1px solid rgba(184,162,255,0.06)">
     <div class="px-4 mb-4">
       <p class="text-xs uppercase tracking-widest mb-1" style="color:#5e5b68">현재 작품</p>
       <p class="font-display font-bold text-white text-sm leading-snug" id="sidebar-work-name">-</p>
+      <p class="text-xs mt-0.5" style="color:#9e9aaa" id="sidebar-work-status">-</p>
     </div>
     <nav class="flex-1 px-2 space-y-0.5">
       <a href="index.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
@@ -286,107 +469,654 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
       <a href="export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
     </nav>
     <div class="px-2">
-      <button onclick="signOutUser()" class="sidebar-item w-full"><span class="mat-icon text-lg">logout</span>로그아웃</button>
+      <button onclick="window.signOutUser && window.signOutUser()" class="sidebar-item w-full"><span class="mat-icon text-lg">logout</span><span id="sidebar-username">로그아웃</span></button>
     </div>
   </aside>
 
   <!-- MAIN CONTENT -->
   <main class="ml-sidebar pt-16 min-h-screen px-4 lg:px-8 py-7 pb-24" style="max-width:1200px;margin-right:auto">
+
+    <!-- Welcome + Sprint banner -->
     <section class="glass-bright rounded-2xl p-6 mb-5 relative overflow-hidden fade-up">
-      <h1 class="text-2xl lg:text-3xl font-display font-extrabold text-white mb-4">안녕하세요, <span id="welcome-name">작가님</span>.</h1>
-      <div id="works-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      <!-- BG atmosphere -->
+      <div class="absolute right-0 top-0 w-64 h-full opacity-[0.08]" style="background:radial-gradient(ellipse at right, #7c50ff, transparent)"></div>
+      <div class="flex items-start justify-between gap-4 relative">
+        <div class="flex-1">
+          <p class="text-xs mb-0.5" style="color:#9e9aaa">오늘도 집필 중 ✍️</p>
+          <h1 class="text-2xl lg:text-3xl font-display font-extrabold text-white mb-1">안녕하세요, <span id="welcome-name">작가님</span>.</h1>
+          <!-- Today goal -->
+          <div class="flex items-center gap-3 mb-4">
+            <div class="flex-1 max-w-xs">
+              <div class="flex justify-between text-xs mb-1">
+                <span style="color:#9e9aaa">오늘 목표</span>
+                <span class="font-semibold text-white"><span id="today-chars">0</span>/<span id="daily-goal">5,000</span>자</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="today-progress" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="text-sm font-bold" style="color:#40d0a8" id="goal-pct">0%</div>
+          </div>
+          <!-- Quick stats row -->
+          <div class="flex flex-wrap gap-5 mb-5">
+            <div>
+              <div class="text-xs uppercase tracking-wider mb-0.5" style="color:#5e5b68">연속 집필</div>
+              <div class="text-xl font-display font-bold text-white"><span id="streak-days">0</span>일</div>
+            </div>
+            <div>
+              <div class="text-xs uppercase tracking-wider mb-0.5" style="color:#5e5b68">미회수 복선</div>
+              <div class="text-xl font-display font-bold" style="color:#ff9bbf" id="unresolved-count">-</div>
+            </div>
+            <div>
+              <div class="text-xs uppercase tracking-wider mb-0.5" style="color:#5e5b68">등록 캐릭터</div>
+              <div class="text-xl font-display font-bold text-white" id="char-total">-</div>
+            </div>
+          </div>
+          <!-- CTAs -->
+          <div class="flex flex-wrap gap-2">
+            <a href="chapters.html" class="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white glow-primary" style="background:#7c50ff">
+              <span class="mat-icon text-base">edit</span>이어서 집필
+            </a>
+            <button onclick="openSprintModal()" class="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all" style="border:1px solid rgba(184,162,255,0.15);color:#b8a2ff" onmouseover="this.style.background='rgba(124,80,255,0.1)'" onmouseout="this.style.background=''">
+              <span class="mat-icon text-base">timer</span>스프린트
+            </button>
+            <a href="export.html" class="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all" style="border:1px solid rgba(184,162,255,0.12);color:#9e9aaa" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+              <span class="mat-icon text-base">upload_file</span>내보내기
+            </a>
+          </div>
+        </div>
+        <!-- Milestone ring -->
+        <div class="hidden lg:flex flex-col items-center gap-2 flex-shrink-0">
+          <div class="relative" style="width:100px;height:100px">
+            <svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)">
+              <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"/>
+              <circle cx="50" cy="50" r="38" fill="none" stroke="#7c50ff" stroke-width="8"
+                stroke-dasharray="238.76" id="milestone-ring" stroke-dashoffset="238.76" stroke-linecap="round"
+                style="filter:drop-shadow(0 0 6px rgba(124,80,255,0.7));transition:stroke-dashoffset 1s ease"/>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-lg font-display font-extrabold text-white" id="milestone-pct">0%</span>
+              <span class="text-xs" style="color:#9e9aaa">완성</span>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-xs" style="color:#9e9aaa" id="milestone-name">마일스톤</div>
+          </div>
+        </div>
+      </div>
     </section>
+
+    <!-- STREAK CALENDAR -->
+    <section class="glass rounded-xl p-5 mb-5 fade-up d1">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+          <span class="mat-icon text-base" style="color:#b8a2ff">local_fire_department</span>
+          집필 스트릭
+        </h2>
+        <div class="flex items-center gap-3 text-xs" style="color:#9e9aaa">
+          <span class="flex items-center gap-1"><span class="streak-cell"></span>없음</span>
+          <span class="flex items-center gap-1"><span class="streak-cell partial"></span>일부</span>
+          <span class="flex items-center gap-1"><span class="streak-cell active"></span>달성</span>
+        </div>
+      </div>
+      <div id="streak-calendar" class="flex flex-wrap gap-1.5"></div>
+      <!-- Today's input -->
+      <div class="mt-4 flex items-center gap-3" style="border-top:1px solid rgba(184,162,255,0.07);padding-top:12px">
+        <span class="mat-icon text-base" style="color:#9e9aaa">edit_note</span>
+        <span class="text-sm" style="color:#9e9aaa">오늘 집필량:</span>
+        <input id="today-input" type="number" placeholder="0" class="inp text-sm" style="max-width:100px;padding:6px 10px"
+          oninput="updateTodayChars(this.value)"/>
+        <span class="text-sm" style="color:#9e9aaa">자</span>
+        <button onclick="saveTodayChars()" class="text-xs font-semibold rounded-lg px-3 py-1.5 transition-all" style="background:rgba(124,80,255,0.15);color:#b8a2ff;border:1px solid rgba(124,80,255,0.3)">저장</button>
+      </div>
+    </section>
+
+    <!-- MIDDLE ROW: works + unresolved -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+
+      <!-- Works -->
+      <div class="lg:col-span-2 fade-up d2">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-white">내 작품</h2>
+          <button onclick="openNewWorkModal()" class="text-xs px-3 py-1.5 rounded-xl transition-all" style="background:rgba(124,80,255,0.1);color:#b8a2ff;border:1px solid rgba(124,80,255,0.25)" onmouseover="this.style.background='rgba(124,80,255,0.2)'" onmouseout="this.style.background='rgba(124,80,255,0.1)'">
+            + 새 작품
+          </button>
+        </div>
+        <div id="works-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+
+      <!-- Unresolved threads -->
+      <div class="fade-up d3">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-white flex items-center gap-1.5">
+            <span class="mat-icon text-base" style="color:#ff9bbf">warning</span>
+            미회수 복선
+          </h2>
+          <span id="thread-badge" class="badge badge-plan">0개</span>
+        </div>
+        <div id="threads-list" class="space-y-2">
+          <div class="text-sm text-center py-6" style="color:#5e5b68">
+            <span class="mat-icon block mb-2" style="font-size:32px">commit</span>
+            복선이 없습니다
+          </div>
+        </div>
+        <a href="chapters.html" class="block mt-3 text-xs text-center transition-colors" style="color:#9e9aaa" onmouseover="this.style.color='#b8a2ff'" onmouseout="this.style.color='#9e9aaa'">트래커에서 관리 →</a>
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <div class="glass rounded-xl p-5 fade-up d4">
+      <h2 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+        <span class="mat-icon text-base" style="color:#b8a2ff">history</span>최근 활동
+      </h2>
+      <div id="activity-list" class="space-y-0">
+        <div class="text-sm py-4 text-center" style="color:#5e5b68">아직 활동 기록이 없습니다.</div>
+      </div>
+    </div>
+
   </main>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-[90] h-16 flex items-center justify-around" style="background:rgba(9,9,13,0.95);border-top:1px solid rgba(184,162,255,0.08)">
+    <a href="index.html" class="flex flex-col items-center gap-1" style="color:#b8a2ff">
+      <span class="mat-icon text-xl">dashboard</span><span style="font-size:10px">홈</span>
+    </a>
+    <a href="characters.html" class="flex flex-col items-center gap-1 nav-link">
+      <span class="mat-icon text-xl">group</span><span style="font-size:10px">캐릭터</span>
+    </a>
+    <a href="chapters.html" class="flex flex-col items-center gap-1 nav-link">
+      <span class="mat-icon text-xl">auto_stories</span><span style="font-size:10px">챕터</span>
+    </a>
+    <a href="export.html" class="flex flex-col items-center gap-1 nav-link">
+      <span class="mat-icon text-xl">upload_file</span><span style="font-size:10px">내보내기</span>
+    </a>
+  </nav>
 </div>
 
-<!-- ═══════ MODALS ═══════ -->
+<!-- ═══════ SPRINT MODAL ═══════ -->
+<div id="sprint-modal" class="hidden modal-bg" onclick="if(event.target===this)closeSprintModal()">
+  <div class="glass-bright rounded-2xl p-8 w-full max-w-sm text-center" onclick="event.stopPropagation()">
+    <h2 class="text-lg font-display font-bold text-white mb-6">집필 스프린트</h2>
+    <div class="relative w-32 h-32 mx-auto mb-6">
+      <svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="6"/>
+        <circle id="sprint-ring" cx="50" cy="50" r="42" fill="none" stroke="#7c50ff" stroke-width="6"
+          stroke-dasharray="263.9" stroke-dashoffset="0" stroke-linecap="round"
+          style="filter:drop-shadow(0 0 8px rgba(124,80,255,0.8));transition:stroke-dashoffset 1s linear"/>
+      </svg>
+      <div class="absolute inset-0 flex flex-col items-center justify-center">
+        <span class="text-3xl font-display font-extrabold text-white" id="sprint-display">25:00</span>
+        <span class="text-xs" style="color:#9e9aaa">남은 시간</span>
+      </div>
+    </div>
+    <div class="flex gap-3 mb-4">
+      <button onclick="setSprintTime(15)" class="flex-1 py-2 rounded-xl text-xs transition-all" style="border:1px solid rgba(184,162,255,0.15);color:#9e9aaa" id="st-15">15분</button>
+      <button onclick="setSprintTime(25)" class="flex-1 py-2 rounded-xl text-xs transition-all" style="background:rgba(124,80,255,0.2);color:#b8a2ff;border:1px solid rgba(124,80,255,0.35)" id="st-25">25분</button>
+      <button onclick="setSprintTime(50)" class="flex-1 py-2 rounded-xl text-xs transition-all" style="border:1px solid rgba(184,162,255,0.15);color:#9e9aaa" id="st-50">50분</button>
+    </div>
+    <div class="flex gap-3">
+      <button onclick="closeSprintModal()" class="flex-1 py-3 rounded-xl text-sm" style="border:1px solid rgba(184,162,255,0.15);color:#9e9aaa">닫기</button>
+      <button onclick="toggleSprint()" id="sprint-btn" class="flex-1 py-3 rounded-xl text-sm font-semibold text-white" style="background:#7c50ff">시작</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ NEW WORK MODAL ═══════ -->
 <div id="new-work-modal" class="hidden modal-bg" onclick="if(event.target===this)this.classList.add('hidden')">
   <div class="glass-bright rounded-2xl p-6 w-full max-w-md" onclick="event.stopPropagation()">
     <h2 class="text-lg font-display font-bold text-white mb-5">새 작품 추가</h2>
     <div class="space-y-4">
-      <input id="nw-title" type="text" placeholder="작품 제목" class="inp"/>
-      <select id="nw-genre" class="inp"><option>현대판타지</option><option>정통판타지</option></select>
+      <div>
+        <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">작품 제목 *</label>
+        <input id="nw-title" type="text" placeholder="예: 검의 신 2권" class="inp"/>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">장르</label>
+          <select id="nw-genre" class="inp">
+            <option>현대판타지</option><option>로맨스판타지</option><option>정통판타지</option>
+            <option>SF</option><option>무협</option><option>공포/스릴러</option><option>기타</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">상태</label>
+          <select id="nw-status" class="inp">
+            <option value="writing">집필 중</option>
+            <option value="plan">기획 단계</option>
+            <option value="hiatus">휴재</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">일일 목표 (자)</label>
+        <input id="nw-goal" type="number" placeholder="5000" class="inp"/>
+      </div>
     </div>
     <div class="flex gap-3 mt-5">
+      <button onclick="document.getElementById('new-work-modal').classList.add('hidden')" class="flex-1 py-3 rounded-xl text-sm" style="border:1px solid rgba(184,162,255,0.15);color:#9e9aaa">취소</button>
       <button onclick="createWork()" class="flex-1 py-3 rounded-xl text-sm font-semibold text-white" style="background:#7c50ff">생성</button>
     </div>
   </div>
 </div>
 
+<!-- SCRIPT -->
 <script>
-// Logic handlers
-function showAuth() { document.getElementById('auth-screen').classList.remove('hidden'); document.getElementById('app-screen').classList.add('hidden'); }
+// ─── App state ──────────────────────────────
+window.appData = {
+  works: [],
+  activeWorkId: localStorage.getItem('sv_activeWork') || null,
+  threads: [],
+  allStats: [],
+  todayChars: parseInt(localStorage.getItem('sv_todayChars') || '0'),
+  dailyGoal: parseInt(localStorage.getItem('sv_dailyGoal') || '5000'),
+  streak: 0,
+  user: null,
+};
+
+// ─── Screen management ──────────────────────────────
+function showAuth() {
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('onboarding-screen').classList.add('hidden');
+  document.getElementById('app-screen').classList.add('hidden');
+}
 function showApp(user) {
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('onboarding-screen').classList.add('hidden');
   document.getElementById('app-screen').classList.remove('hidden');
-  const name = user.displayName?.split(' ')[0] || '작가님';
-  document.getElementById('welcome-name').textContent = name;
-  document.getElementById('user-avatar').src = user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${name}&backgroundColor=7c50ff`;
-}
-function showOnboarding() { document.getElementById('onboarding-screen').classList.remove('hidden'); document.getElementById('app-screen').classList.add('hidden'); }
-
-window.goObStep = (n) => {
-  [1,2,3].forEach(i => document.getElementById(`ob-step-${i}`)?.classList.add('hidden'));
-  document.getElementById(`ob-step-${n}`)?.classList.remove('hidden');
-};
-
-window.finishOnboarding = async () => {
-  const title = document.getElementById('ob-title').value.trim();
-  if(!title) return;
-  const work = { title, genre: document.getElementById('ob-genre').value, status: document.getElementById('ob-status').value, createdAt: new Date().toISOString() };
-  const id = await window.saveWork(work);
-  if(id) {
-    window.appData.activeWorkId = id;
-    localStorage.setItem('sv_activeWork', id);
-    localStorage.setItem('sv_workName', title);
-    goObStep(3);
+  if (user) {
+    const name = user.displayName?.split(' ')[0] || '작가님';
+    document.getElementById('welcome-name').textContent = name;
+    document.getElementById('sidebar-username').textContent = name;
+    document.getElementById('user-avatar').src = user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${name}&backgroundColor=7c50ff`;
   }
+}
+function showOnboarding() {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('app-screen').classList.add('hidden');
+  document.getElementById('onboarding-screen').classList.remove('hidden');
+}
+
+// ─── Demo mode ──────────────────────────────
+window.loadDemoMode = function() {
+  appData.works = [
+    { id: 'w1', title: '마법사의 귀환', genre: '현대판타지', status: 'writing', dailyGoal: 5000, progress: 67, color: '#7c50ff' },
+    { id: 'w2', title: '네온 소울 프로토콜', genre: 'SF', status: 'plan', dailyGoal: 3000, progress: 12, color: '#e8587a' },
+    { id: 'w3', title: '유리 심장', genre: '로맨스판타지', status: 'writing', dailyGoal: 6000, progress: 91, color: '#9d60f0' },
+  ];
+  appData.threads = [
+    { id: 't1', title: '마석 균열의 근원', chapter: '15화', status: 'planted', daysAgo: 23 },
+    { id: 't2', title: '주인공 어머니 정체', chapter: '22화', status: 'planted', daysAgo: 16 },
+    { id: 't3', title: '검은 반지의 저주', chapter: '30화', status: 'developing', daysAgo: 8 },
+  ];
+  appData.allStats = generateDemoStats();
+  appData.activeWorkId = appData.activeWorkId || 'w1';
+  if (!localStorage.getItem('sv_activeWork')) localStorage.setItem('sv_activeWork', 'w1');
+
+  document.getElementById('welcome-name').textContent = '데모 작가님';
+  document.getElementById('user-avatar').src = 'https://api.dicebear.com/7.x/initials/svg?seed=데모&backgroundColor=7c50ff';
+  showApp(null);
+  renderDashboard();
 };
 
-window.enterApp = () => showApp(window.appData.user);
+function generateDemoStats() {
+  const stats = [];
+  const today = new Date();
+  for (let i = 59; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const hasWritten = Math.random() > 0.3;
+    if (hasWritten) stats.push({ date: dateStr, chars: Math.floor(Math.random() * 8000) + 1000 });
+  }
+  return stats;
+}
 
+// ─── Render dashboard ──────────────────────────────
 function renderDashboard() {
-  const active = window.appData.works.find(w => w.id === window.appData.activeWorkId) || window.appData.works[0];
-  if(active) {
-    window.appData.activeWorkId = active.id;
-    localStorage.setItem('sv_activeWork', active.id);
-    localStorage.setItem('sv_workName', active.title);
-    document.getElementById('active-work-name').textContent = active.title;
-    document.getElementById('sidebar-work-name').textContent = active.title;
-  }
-  
+  renderWorkSwitcher();
+  renderWorksGrid();
+  renderUnresolved();
+  renderStreakCalendar();
+  renderStats();
+}
+
+function renderWorkSwitcher() {
+  const active = appData.works.find(w => w.id === appData.activeWorkId) || appData.works[0];
+  if (!active) return;
+  appData.activeWorkId = active.id;
+
+  document.getElementById('active-work-name').textContent = active.title;
+  document.getElementById('sidebar-work-name').textContent = active.title;
+  document.getElementById('sidebar-work-status').textContent = { writing:'집필 중', plan:'기획 단계', hiatus:'휴재 중' }[active.status] || '';
+  document.getElementById('mobile-work-name').textContent = active.title;
+
   const list = document.getElementById('work-dropdown-list');
-  list.innerHTML = window.appData.works.map(w => `
-    <div class="work-option" onclick="switchWork('${w.id}')">
-      <div class="font-semibold text-sm text-white">${w.title}</div>
+  list.innerHTML = appData.works.map(w => `
+    <div class="work-option ${w.id === active.id ? 'active' : ''}" onclick="switchWork('${w.id}')">
+      <div class="font-semibold text-sm" style="color:${w.id===active.id?'#b8a2ff':'#eae6f4'}">${w.title}</div>
+      <div class="text-xs mt-0.5" style="color:#9e9aaa">${w.genre}</div>
     </div>
   `).join('');
 
+  // Update milestone
+  const pct = active.progress || 0;
+  document.getElementById('milestone-pct').textContent = pct + '%';
+  document.getElementById('milestone-name').textContent = active.title;
+  const circ = 238.76;
+  document.getElementById('milestone-ring').style.strokeDashoffset = circ - (circ * pct / 100);
+}
+
+function renderWorksGrid() {
   const grid = document.getElementById('works-grid');
-  grid.innerHTML = window.appData.works.map(w => `
-    <div class="glass-bright p-5 rounded-2xl cursor-pointer" onclick="switchWork('${w.id}')">
-      <h3 class="font-bold text-white truncate">${w.title}</h3>
+  const STATUS_LABEL = { writing:'집필 중', plan:'기획', hiatus:'휴재', done:'완결' };
+  const STATUS_BADGE = { writing:'badge-writing', plan:'badge-plan', hiatus:'badge-done', done:'badge-done' };
+  
+  grid.innerHTML = appData.works.map(w => `
+    <div class="work-card glass-bright card-glow" onclick="switchWork('${w.id}')">
+      <div class="p-4">
+        <div class="flex items-start justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:${w.color}20;border:1px solid ${w.color}30">
+            <span class="mat-icon text-lg" style="color:${w.color}">auto_stories</span>
+          </div>
+          <span class="badge ${STATUS_BADGE[w.status]||'badge-draft'}">${STATUS_LABEL[w.status]||'-'}</span>
+        </div>
+        <h3 class="font-display font-bold text-white text-sm mb-0.5 truncate">${w.title}</h3>
+        <p class="text-xs mb-3" style="color:#9e9aaa">${w.genre||''}</p>
+        <div>
+          <div class="flex justify-between text-xs mb-1">
+            <span style="color:#5e5b68">진행도</span>
+            <span class="font-bold" style="color:${w.color}">${w.progress||0}%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:${w.progress||0}%;background:linear-gradient(90deg,${w.color},${w.color}99)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('') + `
+    <div onclick="openNewWorkModal()" class="work-card flex flex-col items-center justify-center py-8 cursor-pointer transition-all" style="border:2px dashed rgba(184,162,255,0.12);background:transparent;min-height:140px">
+      <span class="mat-icon mb-2 text-3xl" style="color:#5e5b68">add</span>
+      <p class="text-sm" style="color:#5e5b68">새 작품</p>
+    </div>
+  `;
+}
+
+function renderUnresolved() {
+  const threads = (appData.threads || []).filter(t => t.status !== 'resolved');
+  document.getElementById('unresolved-count').textContent = threads.length;
+  document.getElementById('thread-badge').textContent = threads.length + '개';
+
+  const list = document.getElementById('threads-list');
+  if (!threads.length) {
+    list.innerHTML = `<div class="text-sm text-center py-6" style="color:#5e5b68"><span class="mat-icon block mb-2" style="font-size:32px">check_circle</span>미회수 복선 없음</div>`;
+    return;
+  }
+  list.innerHTML = threads.slice(0,4).map(t => `
+    <div class="thread-item">
+      <span class="mat-icon text-base flex-shrink-0" style="color:#ff9bbf">radio_button_unchecked</span>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-white truncate">${t.title}</p>
+        <p class="text-xs" style="color:#9e9aaa">${t.chapter||''} · D+${t.daysAgo||0}</p>
+      </div>
     </div>
   `).join('');
 }
 
-window.switchWork = (id) => {
-  window.appData.activeWorkId = id;
+function renderStreakCalendar() {
+  const cal = document.getElementById('streak-calendar');
+  const today = new Date();
+  const cells = [];
+  const statMap = {};
+  (appData.allStats || []).forEach(s => { statMap[s.date] = s.chars; });
+
+  // 10 weeks = 70 days
+  let streak = 0;
+  let counting = true;
+
+  for (let i = 69; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const isToday = i === 0;
+    const chars = statMap[dateStr] || (isToday ? appData.todayChars : 0);
+    const goal = appData.dailyGoal;
+    const done = chars >= goal;
+    const partial = chars > 0 && !done;
+
+    if (i > 0) {
+      if (done && counting) streak++;
+      else counting = false;
+    }
+
+    const cls = done ? 'streak-cell active' : partial ? 'streak-cell partial' : isToday ? 'streak-cell today' : 'streak-cell';
+    const tooltip = `${dateStr}: ${chars.toLocaleString()}자`;
+    cells.push(`<div class="${cls}" title="${tooltip}"></div>`);
+  }
+
+  cal.innerHTML = cells.join('');
+  document.getElementById('streak-days').textContent = streak;
+}
+
+function renderStats() {
+  const todayChars = appData.todayChars || 0;
+  const goal = appData.dailyGoal;
+  const pct = Math.min(100, Math.round(todayChars / goal * 100));
+
+  document.getElementById('today-chars').textContent = todayChars.toLocaleString();
+  document.getElementById('daily-goal').textContent = goal.toLocaleString();
+  document.getElementById('today-progress').style.width = pct + '%';
+  document.getElementById('goal-pct').textContent = pct + '%';
+  document.getElementById('today-input').value = todayChars || '';
+  document.getElementById('char-total').textContent = appData.works.length ? '7명' : '-';
+}
+
+// ─── Actions ──────────────────────────────
+window.switchWork = function(id) {
+  appData.activeWorkId = id;
+  localStorage.setItem('sv_activeWork', id);
+  renderWorkSwitcher();
+  renderWorksGrid();
+  closeWorkDropdown();
+};
+
+window.toggleWorkDropdown = function() {
+  const dd = document.getElementById('work-dropdown');
+  const arrow = document.getElementById('switcher-arrow');
+  dd.classList.toggle('open');
+  arrow.textContent = dd.classList.contains('open') ? 'expand_less' : 'expand_more';
+};
+window.closeWorkDropdown = function() {
+  document.getElementById('work-dropdown').classList.remove('open');
+  document.getElementById('switcher-arrow').textContent = 'expand_more';
+};
+document.addEventListener('click', e => {
+  if (!document.getElementById('work-switcher')?.contains(e.target)) closeWorkDropdown();
+});
+
+window.openNewWorkModal = function() {
+  closeWorkDropdown();
+  document.getElementById('new-work-modal').classList.remove('hidden');
+};
+
+window.createWork = async function() {
+  const title = document.getElementById('nw-title').value.trim();
+  if (!title) { document.getElementById('nw-title').focus(); return; }
+  const COLORS = ['#7c50ff','#9d60f0','#e8587a','#5080ff','#20b090','#d0a020'];
+  const work = {
+    title,
+    genre: document.getElementById('nw-genre').value,
+    status: document.getElementById('nw-status').value,
+    dailyGoal: parseInt(document.getElementById('nw-goal').value) || 5000,
+    progress: 0,
+    color: COLORS[appData.works.length % COLORS.length],
+    createdAt: new Date().toISOString(),
+  };
+  let id = 'w-' + Date.now();
+  if (window.saveWork) { const fid = await window.saveWork(work); if (fid) id = fid; }
+  work.id = id;
+  appData.works.push(work);
+  appData.activeWorkId = id;
   localStorage.setItem('sv_activeWork', id);
   renderDashboard();
-  document.getElementById('work-dropdown').classList.remove('open');
-};
-
-window.toggleWorkDropdown = () => document.getElementById('work-dropdown').classList.toggle('open');
-window.openNewWorkModal = () => document.getElementById('new-work-modal').classList.remove('hidden');
-
-window.createWork = async () => {
-  const title = document.getElementById('nw-title').value.trim();
-  const work = { title, genre: document.getElementById('nw-genre').value, createdAt: new Date().toISOString() };
-  await window.saveWork(work);
   document.getElementById('new-work-modal').classList.add('hidden');
+  document.getElementById('nw-title').value = '';
+
+  // Add activity
+  addActivity(`새 작품 '${work.title}' 생성`, 'add');
 };
+
+window.updateTodayChars = function(v) {
+  appData.todayChars = parseInt(v) || 0;
+  renderStats();
+  renderStreakCalendar();
+};
+window.saveTodayChars = function() {
+  localStorage.setItem('sv_todayChars', appData.todayChars);
+  if (window.recordWriting) window.recordWriting(appData.todayChars);
+  addActivity(`오늘 ${appData.todayChars.toLocaleString()}자 집필 기록`, 'edit_note');
+
+  // Visual feedback
+  const btn = event.target;
+  btn.textContent = '저장됨 ✓';
+  btn.style.background = 'rgba(64,208,168,0.15)';
+  btn.style.color = '#40d0a8';
+  setTimeout(() => { btn.textContent = '저장'; btn.style.background = ''; btn.style.color = ''; }, 2000);
+};
+
+function addActivity(text, icon = 'circle') {
+  const list = document.getElementById('activity-list');
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)';
+  div.innerHTML = `
+    <span class="mat-icon text-base" style="color:#b8a2ff">${icon}</span>
+    <div class="flex-1"><p class="text-sm text-white">${text}</p><p class="text-xs" style="color:#9e9aaa">방금 전</p></div>
+  `;
+  if (list.firstChild?.tagName === 'DIV' && list.firstChild.style.textAlign) list.innerHTML = '';
+  list.prepend(div);
+}
+
+// ─── Onboarding ──────────────────────────────
+let obPlatforms = [];
+window.goObStep = function(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById(`ob-step-${i}`)?.classList.add('hidden');
+    const dot = document.getElementById(`sdot-${i}`);
+    if (i < n) { dot.classList.add('done'); dot.classList.remove('active'); }
+    else if (i === n) { dot.classList.add('active'); dot.classList.remove('done'); }
+    else { dot.classList.remove('active','done'); }
+  });
+  document.getElementById(`ob-step-${n}`)?.classList.remove('hidden');
+};
+window.toggleObPlatform = function(el, name) {
+  const idx = obPlatforms.indexOf(name);
+  if (idx > -1) {
+    obPlatforms.splice(idx, 1);
+    el.style.background = ''; el.style.color = '#9e9aaa'; el.style.borderColor = 'rgba(184,162,255,0.2)';
+  } else {
+    obPlatforms.push(name);
+    el.style.background = 'rgba(124,80,255,0.2)'; el.style.color = '#b8a2ff'; el.style.borderColor = 'rgba(124,80,255,0.4)';
+  }
+};
+window.finishOnboarding = async function() {
+  const title = document.getElementById('ob-title').value.trim();
+  if (!title) { document.getElementById('ob-title').focus(); return; }
+  const work = {
+    title,
+    genre: document.getElementById('ob-genre').value,
+    status: document.getElementById('ob-status').value,
+    dailyGoal: parseInt(document.getElementById('ob-daily-goal').value) || 5000,
+    platforms: obPlatforms,
+    progress: 0,
+    color: '#7c50ff',
+    createdAt: new Date().toISOString(),
+  };
+  appData.dailyGoal = work.dailyGoal;
+  localStorage.setItem('sv_dailyGoal', work.dailyGoal);
+
+  let id = 'w-' + Date.now();
+  if (window.saveWork) { const fid = await window.saveWork(work); if (fid) id = fid; }
+  work.id = id;
+  appData.works = [work];
+  appData.activeWorkId = id;
+  localStorage.setItem('sv_activeWork', id);
+  goObStep(3);
+};
+window.skipOnboarding = function() { enterApp(); };
+window.enterApp = function() {
+  if (!appData.works.length) {
+    appData.works = [{ id: 'demo-w1', title: '내 첫 번째 작품', genre: '현대판타지', status: 'writing', dailyGoal: 5000, progress: 0, color: '#7c50ff' }];
+    appData.activeWorkId = 'demo-w1';
+  }
+  document.getElementById('onboarding-screen').classList.add('hidden');
+  document.getElementById('app-screen').classList.remove('hidden');
+  renderDashboard();
+};
+
+// ─── Sprint Timer ──────────────────────────────
+let sprintTotal = 25 * 60, sprintLeft = 25 * 60, sprintRunning = false, sprintInterval;
+window.openSprintModal = function() { document.getElementById('sprint-modal').classList.remove('hidden'); };
+window.closeSprintModal = function() {
+  document.getElementById('sprint-modal').classList.add('hidden');
+  if (sprintRunning) { clearInterval(sprintInterval); sprintRunning = false; document.getElementById('sprint-btn').textContent = '시작'; }
+};
+window.setSprintTime = function(min) {
+  if (sprintRunning) return;
+  sprintTotal = sprintLeft = min * 60;
+  ['15','25','50'].forEach(m => {
+    const btn = document.getElementById(`st-${m}`);
+    if (m == min) { btn.style.background='rgba(124,80,255,0.2)'; btn.style.color='#b8a2ff'; btn.style.borderColor='rgba(124,80,255,0.35)'; }
+    else { btn.style.background=''; btn.style.color='#9e9aaa'; btn.style.borderColor='rgba(184,162,255,0.15)'; }
+  });
+  updateSprintDisplay();
+};
+window.toggleSprint = function() {
+  const btn = document.getElementById('sprint-btn');
+  if (sprintRunning) {
+    clearInterval(sprintInterval); sprintRunning = false; btn.textContent = '계속';
+  } else {
+    sprintRunning = true; btn.textContent = '일시정지';
+    sprintInterval = setInterval(() => {
+      sprintLeft--;
+      if (sprintLeft <= 0) {
+        sprintLeft = 0; clearInterval(sprintInterval); sprintRunning = false;
+        btn.textContent = '완료!';
+      }
+      updateSprintDisplay();
+    }, 1000);
+  }
+};
+function updateSprintDisplay() {
+  const m = Math.floor(sprintLeft/60).toString().padStart(2,'0');
+  const s = (sprintLeft%60).toString().padStart(2,'0');
+  document.getElementById('sprint-display').textContent = `${m}:${s}`;
+  const pct = sprintLeft / sprintTotal;
+  document.getElementById('sprint-ring').style.strokeDashoffset = 263.9 * pct;
+}
+
+// ─── Mobile drawer ──────────────────────────────
+window.toggleMobileDrawer = function() {
+  document.getElementById('mobile-drawer').classList.toggle('open');
+  document.getElementById('drawer-overlay').classList.toggle('open');
+};
+
+// ─── Notifications ──────────────────────────────
+window.toggleNotifs = function() { /* future */ };
+
+// ─── Init ──────────────────────────────
+window.addEventListener('load', () => {
+  // If Firebase not configured, show demo after brief pause
+  setTimeout(() => {
+    if (document.getElementById('auth-screen').classList.contains('hidden')) return;
+    // Still on auth - check if we should auto-demo
+  }, 2000);
+
+  // Restore today chars from localStorage
+  appData.todayChars = parseInt(localStorage.getItem('sv_todayChars') || '0');
+  appData.dailyGoal = parseInt(localStorage.getItem('sv_dailyGoal') || '5000');
+});
 </script>
+
 </body>
 </html>

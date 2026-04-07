@@ -10,97 +10,70 @@
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, where, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-  // [EMERGENCY FIX] Hardcoded firebase config for production
-  const firebaseConfig = {
-    apiKey: "AIzaSyBEkQmeFG8XGxNuYDZof_3_9oOS4cEMOyk",
-    authDomain: "story-vital.firebaseapp.com",
-    projectId: "story-vital",
-    storageBucket: "story-vital.firebasestorage.app",
-    messagingSenderId: "872952700994",
-    appId: "1:872952700994:web:efa41cd38cd491fe5ccddb"
-  };
+  import { firebaseConfig } from './firebase-config.js';
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
+  let db, auth;
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+  } catch(e) {}
 
-  // Initialize global state immediately to prevent reference errors
-  window.appState = { chapters: [], threads: [], selectedChapterId: null };
-  window.currentUser = null;
-  window.currentProjectId = localStorage.getItem('sv_activeWork') || null;
-
-  // Auth Guard
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      window.currentUser = user;
-      const projectId = localStorage.getItem('sv_activeWork');
-      if (projectId) {
-        window.currentProjectId = projectId;
-        loadChapters(projectId);
+  window.addEventListener('load', () => {
+    if (!auth) { window.loadDemoData(); return; }
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.currentUser = user;
+        loadChapters(user.uid);
       } else {
-        // Find first project if none active
-        const projectsRef = collection(db, 'projects');
-        const pq = query(projectsRef, where("userId", "==", user.uid), limit(1));
-        const pSnap = await getDocs(pq);
-        if (!pSnap.empty) {
-          window.currentProjectId = pSnap.docs[0].id;
-          localStorage.setItem('sv_activeWork', window.currentProjectId);
-          loadChapters(window.currentProjectId);
-        } else {
-          location.href = 'index.html';
-        }
+        window.loadDemoData();
       }
-    } else {
-      location.href = 'index.html';
-    }
+    });
   });
 
-  async function loadChapters(projectId) {
-    if (!projectId) return;
+  async function loadChapters(uid) {
     try {
-      const ref = collection(db, 'timeline_events');
-      const q = query(ref, where("projectId", "==", projectId));
-      
+      const workId = localStorage.getItem('sv_activeWork') || 'default';
+      const q = query(collection(db, 'timeline_events'), where('userId', '==', uid), where('projectId', '==', workId));
       onSnapshot(q, (snap) => {
-        const events = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.appState.chapters = events.filter(e => e.type === 'chapter' || !e.type);
-        window.appState.threads = events.filter(e => e.type === 'thread');
-        if (typeof window.renderAll === 'function') window.renderAll();
+        if (snap.empty) { window.loadDemoData(); return; }
+        const allEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        window.appState.chapters = allEvents.filter(e => e.type === 'chapter');
+        window.appState.threads = allEvents.filter(e => e.type === 'thread');
+        window.renderAll();
       });
-    } catch(e) { console.error(e); }
+    } catch(e) { window.loadDemoData(); }
   }
 
   window.saveChapterToDb = async function(chapter) {
-    const uid = window.currentUser?.uid;
-    const projectId = window.currentProjectId;
-    if (!uid || !projectId) return;
+    if (!window.currentUser || !db) return;
+    const workId = localStorage.getItem('sv_activeWork') || 'default';
+    const eventData = { ...chapter, type: 'chapter', userId: window.currentUser.uid, projectId: workId, updatedAt: new Date().toISOString() };
     try {
-      const data = { ...chapter, userId: uid, projectId: projectId, type: 'chapter', updatedAt: new Date().toISOString() };
-      if (chapter.id && !chapter.id.startsWith('ch-')) {
-        await updateDoc(doc(db, 'timeline_events', chapter.id), data);
+      if (chapter.id && !chapter.id.startsWith('demo')) {
+        await updateDoc(doc(db, 'timeline_events', chapter.id), eventData);
       } else {
-        delete data.id;
-        data.createdAt = new Date().toISOString();
-        await addDoc(collection(db, 'timeline_events'), data);
+        const ref = collection(db, 'timeline_events');
+        const docRef = await addDoc(ref, eventData);
+        chapter.id = docRef.id;
       }
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error('Save failed:', e); }
   };
 
   window.saveThreadToDb = async function(thread) {
-    const uid = window.currentUser?.uid;
-    const projectId = window.currentProjectId;
-    if (!uid || !projectId) return;
+    if (!window.currentUser || !db) return;
+    const workId = localStorage.getItem('sv_activeWork') || 'default';
+    const eventData = { ...thread, type: 'thread', userId: window.currentUser.uid, projectId: workId, updatedAt: new Date().toISOString() };
     try {
-      const data = { ...thread, userId: uid, projectId: projectId, type: 'thread', updatedAt: new Date().toISOString() };
-      if (thread.id && !thread.id.startsWith('th-')) {
-        await updateDoc(doc(db, 'timeline_events', thread.id), data);
+      if (thread.id && !thread.id.startsWith('demo')) {
+        await updateDoc(doc(db, 'timeline_events', thread.id), eventData);
       } else {
-        delete data.id;
-        data.createdAt = new Date().toISOString();
-        await addDoc(collection(db, 'timeline_events'), data);
+        const ref = collection(db, 'timeline_events');
+        const docRef = await addDoc(ref, eventData);
+        thread.id = docRef.id;
       }
     } catch(e) {}
   };
@@ -130,15 +103,44 @@
   * { box-sizing: border-box; }
   .mat-icon { font-family: 'Material Symbols Outlined'; font-style: normal; user-select: none; }
   body { background: #0a0a0e; color: #ede9f4; font-family: 'Manrope', sans-serif; }
+  .glass { background: rgba(21,21,25,0.75); backdrop-filter: blur(20px); border: 1px solid rgba(184,162,255,0.1); }
   .glass-bright { background: rgba(28,28,34,0.8); backdrop-filter: blur(24px); border: 1px solid rgba(184,162,255,0.12); }
+  .glow-primary { box-shadow: 0 0 20px rgba(124,80,255,0.3); }
+  .nav-active { color: #b8a2ff; }
   .sidebar-active { background: rgba(124,80,255,0.15); color: #b8a2ff; border-left: 2px solid #7c50ff; }
   .input-recessed { background: #000; border: 1px solid transparent; transition: border-color 0.2s; color: #ede9f4; }
+  .input-recessed:focus { border-color: #7c50ff; outline: none; box-shadow: 0 0 0 3px rgba(124,80,255,0.15); }
+  
+  /* Kanban */
+  .kanban-col { min-height: 300px; }
+  .thread-card { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: grab; }
+  .thread-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .thread-card.dragging { opacity: 0.5; cursor: grabbing; }
+  .kanban-col.drag-over { background: rgba(124,80,255,0.08) !important; }
+
+  /* Chapter list */
+  .chapter-item { transition: background 0.15s ease; }
+  .chapter-item:hover { background: rgba(255,255,255,0.03); }
   .chapter-active { background: rgba(124,80,255,0.1); border-left: 2px solid #7c50ff; }
+
+  /* Status badges */
+  .s-planted { background: rgba(255,155,191,0.15); color: #ff9bbf; border: 1px solid rgba(255,155,191,0.2); }
+  .s-developing { background: rgba(124,80,255,0.15); color: #b8a2ff; border: 1px solid rgba(124,80,255,0.25); }
+  .s-resolved { background: rgba(32,176,144,0.15); color: #40d0a8; border: 1px solid rgba(32,176,144,0.2); }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(184,162,255,0.2); border-radius: 4px; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .fade-up { animation: fadeUp 0.4s ease forwards; }
+  .modal-overlay { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
   @media (max-width: 768px) { .sidebar { display: none; } .main-content { margin-left: 0 !important; } }
 </style>
 </head>
 
 <body class="min-h-screen overflow-x-hidden">
+
+<!-- TOP NAV -->
 <nav class="fixed top-0 left-0 right-0 z-50 h-16 glass-bright flex items-center justify-between px-6">
   <div class="flex items-center gap-8">
     <a href="index.html" class="flex items-center gap-2">
@@ -146,88 +148,490 @@
       <span class="font-display font-bold text-white text-lg">StoryVital</span>
     </a>
     <div class="hidden md:flex items-center gap-6 text-sm">
-      <a href="index.html" class="text-on-surface-variant hover:text-on-surface">대시보드</a>
-      <a href="characters.html" class="text-on-surface-variant hover:text-on-surface">캐릭터</a>
-      <a href="chapters.html" class="text-[#b8a2ff] font-semibold">챕터 트래커</a>
-      <a href="export.html" class="text-on-surface-variant hover:text-on-surface">내보내기</a>
+      <a href="index.html" class="text-on-surface-variant hover:text-on-surface transition-colors">대시보드</a>
+      <a href="characters.html" class="text-on-surface-variant hover:text-on-surface transition-colors">캐릭터</a>
+      <a href="chapters.html" class="nav-active font-semibold">챕터 트래커</a>
+      <a href="export.html" class="text-on-surface-variant hover:text-on-surface transition-colors">내보내기</a>
     </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <button class="mat-icon text-outline hover:text-on-surface transition-colors">notifications</button>
+    <img id="user-avatar" src="https://api.dicebear.com/7.x/initials/svg?seed=작가&backgroundColor=7c50ff" 
+      alt="" class="w-8 h-8 rounded-full object-cover" style="border: 1px solid rgba(124,80,255,0.4)"/>
   </div>
 </nav>
 
 <div class="flex pt-16 min-h-screen">
-  <aside class="sidebar fixed left-0 top-16 bottom-0 w-56 bg-surface-low flex flex-col py-6 z-40" style="border-right: 1px solid rgba(184,162,255,0.06)">
-    <div class="px-4 mb-6"><h2 class="font-display font-bold text-white text-sm" id="sidebar-work-name">내 작품</h2></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar fixed left-0 top-16 bottom-0 w-56 bg-surface-low flex flex-col py-6 z-40"
+    style="border-right: 1px solid rgba(184,162,255,0.06)">
+    <div class="px-4 mb-6">
+      <p class="text-xs text-outline uppercase tracking-widest mb-1">현재 작품</p>
+      <h2 class="font-display font-bold text-white text-sm">마법사의 귀환</h2>
+      <p class="text-xs text-on-surface-variant mt-0.5">집필 중</p>
+    </div>
     <nav class="flex-1 px-2 space-y-1 text-sm">
-      <a href="index.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high transition-all"><span class="mat-icon text-lg">dashboard</span><span>대시보드</span></a>
-      <a href="characters.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high transition-all"><span class="mat-icon text-lg">group</span><span>캐릭터 DB</span></a>
-      <a href="chapters.html" class="sidebar-active flex items-center gap-3 px-3 py-2.5 rounded-lg"><span class="mat-icon text-lg">format_list_bulleted</span><span>챕터 트래커</span></a>
-      <a href="export.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high transition-all"><span class="mat-icon text-lg">upload_file</span><span>내보내기</span></a>
+      <a href="index.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
+        <span class="mat-icon text-lg">dashboard</span><span>대시보드</span>
+      </a>
+      <a href="characters.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
+        <span class="mat-icon text-lg">group</span><span>캐릭터 DB</span>
+      </a>
+      <a href="chapters.html" class="sidebar-active flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all">
+        <span class="mat-icon text-lg">format_list_bulleted</span><span>챕터 트래커</span>
+      </a>
+      <a href="export.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
+        <span class="mat-icon text-lg">upload_file</span><span>내보내기</span>
+      </a>
     </nav>
   </aside>
 
+  <!-- MAIN -->
   <main class="main-content flex-1 ml-56 flex flex-col" style="height: calc(100vh - 64px); overflow: hidden;">
+
+    <!-- Sub-header -->
     <div class="px-8 py-5 flex items-center justify-between flex-shrink-0" style="border-bottom: 1px solid rgba(184,162,255,0.07)">
-      <h1 class="text-xl font-display font-extrabold text-white flex items-center gap-2"><span class="mat-icon text-primary">format_list_bulleted</span>챕터 트래커</h1>
-      <button onclick="openAddChapter()" class="flex items-center gap-2 bg-primary-dim text-white rounded-xl px-4 py-2 text-sm font-semibold">회차 추가</button>
-    </div>
-    <div class="flex flex-1 overflow-hidden">
-      <div class="w-72 flex-shrink-0 overflow-y-auto" style="border-right: 1px solid rgba(184,162,255,0.07)"><div id="chapter-list" class="py-2"></div></div>
-      <div class="flex-1 overflow-y-auto p-6">
-        <div id="chapter-detail" class="mb-6">
-          <div class="glass-bright rounded-xl p-5 mb-4">
-            <h2 id="detail-title" class="font-display font-bold text-white text-lg">회차를 선택하세요</h2>
-            <p id="detail-summary" class="text-sm text-on-surface-variant leading-relaxed mt-2"></p>
-          </div>
-          <div id="chapter-threads" class="space-y-2"></div>
+      <div>
+        <h1 class="text-xl font-display font-extrabold text-white flex items-center gap-2">
+          <span class="mat-icon text-primary">format_list_bulleted</span>
+          챕터 트래커
+        </h1>
+        <p class="text-xs text-on-surface-variant mt-0.5">회차별 사건과 복선을 한눈에</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- View toggle -->
+        <div class="flex rounded-lg overflow-hidden" style="border: 1px solid rgba(184,162,255,0.15)">
+          <button id="view-list" onclick="setView('list')" class="px-3 py-1.5 text-xs font-semibold bg-primary-dim/20 text-primary transition-all">
+            목록
+          </button>
+          <button id="view-kanban" onclick="setView('kanban')" class="px-3 py-1.5 text-xs font-semibold text-on-surface-variant transition-all">
+            칸반
+          </button>
         </div>
+        <button onclick="openAddChapter()"
+          class="flex items-center gap-2 bg-primary-dim text-white rounded-xl px-4 py-2 text-sm font-semibold hover:bg-primary-dim/80 transition-all">
+          <span class="mat-icon text-base">add</span>
+          회차 추가
+        </button>
+      </div>
+    </div>
+
+    <!-- Content area: split pane -->
+    <div class="flex flex-1 overflow-hidden">
+
+      <!-- LEFT: Chapter list -->
+      <div class="w-72 flex-shrink-0 overflow-y-auto" style="border-right: 1px solid rgba(184,162,255,0.07)">
+        <div id="chapter-list" class="py-2">
+          <!-- Rendered by JS -->
+        </div>
+        <button onclick="openAddChapter()" class="flex items-center gap-2 w-full px-4 py-3 text-sm text-on-surface-variant hover:text-on-surface transition-colors">
+          <span class="mat-icon text-base">add_circle</span>
+          회차 추가
+        </button>
+      </div>
+
+      <!-- RIGHT: Content -->
+      <div class="flex-1 overflow-y-auto p-6">
+
+        <!-- LIST VIEW -->
+        <div id="list-view">
+          <!-- Chapter detail -->
+          <div id="chapter-detail" class="mb-6">
+            <div class="glass-bright rounded-xl p-5 mb-4">
+              <div class="flex items-start justify-between mb-3">
+                <div>
+                  <div class="text-xs text-outline uppercase tracking-wider mb-1">선택된 회차</div>
+                  <h2 id="detail-title" class="font-display font-bold text-white text-lg"></h2>
+                </div>
+                <div id="detail-status"></div>
+              </div>
+              <p id="detail-summary" class="text-sm text-on-surface-variant leading-relaxed mb-4"></p>
+              <div id="detail-beats" class="space-y-2"></div>
+            </div>
+
+            <!-- Threads for this chapter -->
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-display font-semibold text-white text-sm flex items-center gap-2">
+                  <span class="mat-icon text-tertiary text-base">commit</span>
+                  이 회차의 복선/사건
+                </h3>
+                <button onclick="openAddThread()" class="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+                  <span class="mat-icon text-sm">add</span>복선 추가
+                </button>
+              </div>
+              <div id="chapter-threads" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KANBAN VIEW -->
+        <div id="kanban-view" class="hidden">
+          <div class="grid grid-cols-3 gap-4">
+            <!-- Planted -->
+            <div>
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-2 h-2 rounded-full bg-tertiary"></div>
+                <span class="text-sm font-semibold text-on-surface-variant">투척된 복선</span>
+                <span id="count-planted" class="ml-auto text-xs text-tertiary bg-tertiary/10 rounded-full px-2 py-0.5">0</span>
+              </div>
+              <div id="col-planted" class="kanban-col rounded-xl p-3 space-y-2"
+                style="background: rgba(232,88,122,0.04); border: 1px solid rgba(232,88,122,0.1)"
+                ondragover="onDragOver(event, 'planted')" ondrop="onDrop(event, 'planted')">
+              </div>
+            </div>
+            <!-- Developing -->
+            <div>
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-2 h-2 rounded-full bg-primary"></div>
+                <span class="text-sm font-semibold text-on-surface-variant">전개 중</span>
+                <span id="count-developing" class="ml-auto text-xs text-primary bg-primary/10 rounded-full px-2 py-0.5">0</span>
+              </div>
+              <div id="col-developing" class="kanban-col rounded-xl p-3 space-y-2"
+                style="background: rgba(124,80,255,0.04); border: 1px solid rgba(124,80,255,0.1)"
+                ondragover="onDragOver(event, 'developing')" ondrop="onDrop(event, 'developing')">
+              </div>
+            </div>
+            <!-- Resolved -->
+            <div>
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-2 h-2 rounded-full" style="background: #40d0a8"></div>
+                <span class="text-sm font-semibold text-on-surface-variant">회수 완료</span>
+                <span id="count-resolved" class="ml-auto text-xs rounded-full px-2 py-0.5" style="color: #40d0a8; background: rgba(64,208,168,0.1)">0</span>
+              </div>
+              <div id="col-resolved" class="kanban-col rounded-xl p-3 space-y-2"
+                style="background: rgba(64,208,168,0.04); border: 1px solid rgba(64,208,168,0.1)"
+                ondragover="onDragOver(event, 'resolved')" ondrop="onDrop(event, 'resolved')">
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </main>
 </div>
 
-<!-- MODALS -->
-<div id="chapter-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/70" onclick="if(event.target===this)this.classList.add('hidden')">
+<!-- MOBILE NAV -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around"
+  style="background: rgba(10,10,14,0.95); border-top: 1px solid rgba(184,162,255,0.08)">
+  <a href="index.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
+    <span class="mat-icon text-xl">dashboard</span><span class="text-xs">홈</span>
+  </a>
+  <a href="characters.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
+    <span class="mat-icon text-xl">group</span><span class="text-xs">캐릭터</span>
+  </a>
+  <a href="chapters.html" class="flex flex-col items-center gap-1 text-primary">
+    <span class="mat-icon text-xl">auto_stories</span><span class="text-xs">챕터</span>
+  </a>
+  <a href="export.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
+    <span class="mat-icon text-xl">upload_file</span><span class="text-xs">내보내기</span>
+  </a>
+</nav>
+
+<!-- MODAL: Add Chapter -->
+<div id="chapter-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center modal-overlay"
+  onclick="if(event.target===this)this.classList.add('hidden')">
   <div class="glass-bright rounded-2xl p-6 w-full max-w-lg mx-4" onclick="event.stopPropagation()">
-    <h2 class="text-white text-lg font-bold mb-4">새 회차 추가</h2>
-    <input id="new-chap-num" type="number" placeholder="회차 번호" class="input-recessed w-full rounded-xl px-4 py-2.5 mb-3"/>
-    <input id="new-chap-title" type="text" placeholder="회차 제목" class="input-recessed w-full rounded-xl px-4 py-2.5 mb-3"/>
-    <textarea id="new-chap-summary" placeholder="줄거리 요약" class="input-recessed w-full rounded-xl px-4 py-2.5 mb-4"></textarea>
-    <button onclick="addChapter()" class="w-full bg-primary-dim text-white rounded-xl py-3 font-semibold">추가하기</button>
+    <h2 class="font-display font-bold text-white text-lg mb-5">새 회차 추가</h2>
+    <div class="space-y-4">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-outline uppercase tracking-wider block mb-2">회차 번호</label>
+          <input id="new-chap-num" type="number" placeholder="예: 39" class="input-recessed w-full rounded-xl px-4 py-2.5 text-sm"/>
+        </div>
+        <div>
+          <label class="text-xs text-outline uppercase tracking-wider block mb-2">상태</label>
+          <select id="new-chap-status" class="input-recessed w-full rounded-xl px-4 py-2.5 text-sm">
+            <option value="draft">집필 예정</option>
+            <option value="writing">집필 중</option>
+            <option value="done">완성</option>
+            <option value="published">연재됨</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-outline uppercase tracking-wider block mb-2">회차 제목</label>
+        <input id="new-chap-title" type="text" placeholder="예: 붉은 달의 밤" class="input-recessed w-full rounded-xl px-4 py-2.5 text-sm"/>
+      </div>
+      <div>
+        <label class="text-xs text-outline uppercase tracking-wider block mb-2">줄거리 요약</label>
+        <textarea id="new-chap-summary" rows="3" placeholder="이 회차에서 일어나는 핵심 사건을 간략히..."
+          class="input-recessed w-full rounded-xl px-4 py-2.5 text-sm resize-none"></textarea>
+      </div>
+      <div>
+        <label class="text-xs text-outline uppercase tracking-wider block mb-2">핵심 사건/복선 (쉼표로 구분)</label>
+        <input id="new-chap-beats" type="text" placeholder="마석 균열 발동, 서이안 정체 암시..." class="input-recessed w-full rounded-xl px-4 py-2.5 text-sm"/>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="document.getElementById('chapter-modal').classList.add('hidden')"
+        class="flex-1 rounded-xl py-2.5 text-sm text-on-surface-variant" style="border: 1px solid rgba(184,162,255,0.1)">취소</button>
+      <button onclick="addChapter()" class="flex-1 bg-primary-dim text-white rounded-xl py-2.5 text-sm font-semibold">추가하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Thread -->
+<div id="thread-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center modal-overlay"
+  onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="glass-bright rounded-2xl p-6 w-full max-w-md mx-4" onclick="event.stopPropagation()">
+    <h2 class="font-display font-bold text-white text-lg mb-5">복선/사건 추가</h2>
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs text-outline uppercase tracking-wider block mb-2">제목</label>
+        <input id="new-thread-title" type="text" placeholder="예: 마석 균열의 근원" class="input-recessed w-full rounded-xl px-4 py-2.5 text-sm"/>
+      </div>
+      <div>
+        <label class="text-xs text-outline uppercase tracking-wider block mb-2">설명</label>
+        <textarea id="new-thread-desc" rows="2" placeholder="구체적인 내용이나 독자의 기대..." class="input-recessed w-full rounded-xl px-4 py-2.5 text-sm resize-none"></textarea>
+      </div>
+      <div>
+        <label class="text-xs text-outline uppercase tracking-wider block mb-2">종류</label>
+        <div class="flex gap-2">
+          <button onclick="setThreadType(this, '복선')" class="thread-type-btn flex-1 py-2 rounded-xl text-xs font-semibold s-planted">복선</button>
+          <button onclick="setThreadType(this, '사건')" class="thread-type-btn flex-1 py-2 rounded-xl text-xs font-semibold text-on-surface-variant" style="border: 1px solid rgba(184,162,255,0.15)">사건</button>
+          <button onclick="setThreadType(this, '설정')" class="thread-type-btn flex-1 py-2 rounded-xl text-xs font-semibold text-on-surface-variant" style="border: 1px solid rgba(184,162,255,0.15)">설정</button>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-outline uppercase tracking-wider block mb-2">상태</label>
+        <select id="new-thread-status" class="input-recessed w-full rounded-xl px-4 py-2.5 text-sm">
+          <option value="planted">투척됨</option>
+          <option value="developing">전개 중</option>
+          <option value="resolved">회수 완료</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="document.getElementById('thread-modal').classList.add('hidden')"
+        class="flex-1 rounded-xl py-2.5 text-sm text-on-surface-variant" style="border: 1px solid rgba(184,162,255,0.1)">취소</button>
+      <button onclick="addThread()" class="flex-1 bg-primary-dim text-white rounded-xl py-2.5 text-sm font-semibold">추가하기</button>
+    </div>
   </div>
 </div>
 
 <script>
-  window.renderAll = function() {
-    const list = document.getElementById('chapter-list');
-    list.innerHTML = appState.chapters.map(ch => `
-      <div onclick="selectChapter('${ch.id}')" class="px-4 py-3 cursor-pointer ${ch.id === appState.selectedChapterId ? 'chapter-active' : ''} rounded-lg mx-2 mb-1">
-        <span class="text-xs font-bold text-on-surface-variant">${ch.num}화</span>
-        <p class="text-sm font-semibold text-white truncate">${ch.title}</p>
-      </div>`).join('');
+  // ─── App State ──────────────────────────────
+  window.appState = {
+    chapters: [],
+    threads: [],
+    selectedChapterId: null,
+    currentView: 'list',
+    threadType: '복선',
+  };
 
+  const STATUS_MAP = {
+    draft: { label: '예정', cls: 'text-outline border-outline/30', bg: 'bg-outline/10' },
+    writing: { label: '집필 중', cls: 'text-primary border-primary/30', bg: 'bg-primary/10' },
+    done: { label: '완성', cls: 'text-secondary border-secondary/30', bg: 'bg-secondary/10' },
+    published: { label: '연재됨', cls: 'text-green-400 border-green-400/30', bg: 'bg-green-400/10' },
+  };
+
+  // ─── Demo Data ──────────────────────────────
+  window.loadDemoData = function() {
+    appState.chapters = [
+      { id: 'demo1', num: 36, title: '균열의 전야', status: 'published', summary: '주인공이 폐허 광산 지하에서 이상한 마석 균열을 발견한다. 동행한 서이안이 갑자기 경련을 일으키며 "또 시작됐다"고 중얼거린다.', beats: ['마석 균열 발견', '서이안 예지 발동'] },
+      { id: 'demo2', num: 37, title: '예언자의 경고', status: 'published', summary: '서이안이 꿈에서 본 것을 털어놓는다. 마계의 봉인이 3일 후 풀린다는 내용. 주인공은 믿지 않지만 강민혁 백작이 현장에 나타난다.', beats: ['서이안 예지 공개', '강민혁 등장'] },
+      { id: 'demo3', num: 38, title: '붉은 달의 밤', status: 'writing', summary: '봉인 해제 하루 전. 주인공이 진실을 알아내려 왕실 기록물 열람실에 잠입한다. 오래된 기록에서 자신의 이름을 발견한다.', beats: ['왕실 기록 잠입', '자신의 이름 발견'] },
+      { id: 'demo4', num: 39, title: '(집필 예정)', status: 'draft', summary: '', beats: [] },
+    ];
+    appState.threads = [
+      { id: 't1', title: '마석 균열의 근원', desc: '광산 붕괴를 일으킨 균열과 동일한 에너지. 누가 만들었는가?', type: '복선', status: 'planted', chapterId: 'demo1' },
+      { id: 't2', title: '서이안의 예지 한계', desc: '미래를 바꾸려 할수록 더 나쁜 결과. 독자에게 이미 암시됨.', type: '복선', status: 'developing', chapterId: 'demo2' },
+      { id: 't3', title: '강민혁의 진의', desc: '우연이 아니라 주인공을 따라다닌 것. 첫 등장부터 의도가 있었다.', type: '사건', status: 'developing', chapterId: 'demo2' },
+      { id: 't4', title: '왕실 기록의 주인공 이름', desc: '300년 전 기록. 현재 주인공과 같은 이름, 같은 능력 설명.', type: '복선', status: 'planted', chapterId: 'demo3' },
+      { id: 't5', title: '광산 붕괴 사고', desc: '3년 전 사고의 진실. 주인공만 살아남은 이유가 여기에.', type: '설정', status: 'resolved', chapterId: 'demo1' },
+    ];
+    appState.selectedChapterId = 'demo3';
+    renderAll();
+  };
+
+  // ─── Render ──────────────────────────────
+  window.renderAll = function() {
+    renderChapterList();
+    renderChapterDetail();
+    renderKanban();
+  };
+
+  function renderChapterList() {
+    const list = document.getElementById('chapter-list');
+    list.innerHTML = appState.chapters.map(ch => {
+      const s = STATUS_MAP[ch.status] || STATUS_MAP.draft;
+      const isActive = ch.id === appState.selectedChapterId;
+      return `<div onclick="selectChapter('${ch.id}')"
+        class="chapter-item px-4 py-3 cursor-pointer ${isActive ? 'chapter-active' : ''} rounded-lg mx-2 mb-1">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-on-surface-variant">${String(ch.num).padStart(2,'0')}화</span>
+          <span class="text-xs px-2 py-0.5 rounded-full ${s.cls} ${s.bg}" style="border-width:1px;border-style:solid">${s.label}</span>
+        </div>
+        <p class="text-sm font-semibold text-on-surface mt-0.5 truncate">${ch.title}</p>
+      </div>`;
+    }).join('');
+  }
+
+  function renderChapterDetail() {
     const ch = appState.chapters.find(c => c.id === appState.selectedChapterId);
     if (!ch) return;
-    document.getElementById('detail-title').textContent = `${ch.num}화 · ${ch.title}`;
-    document.getElementById('detail-summary').textContent = ch.summary || '';
+    document.getElementById('detail-title').textContent = `${String(ch.num).padStart(2,'0')}화 · ${ch.title}`;
+    document.getElementById('detail-summary').textContent = ch.summary || '줄거리가 아직 없습니다.';
+
+    const s = STATUS_MAP[ch.status] || STATUS_MAP.draft;
+    document.getElementById('detail-status').innerHTML = `<span class="text-xs px-2 py-1 rounded-full ${s.cls} ${s.bg}" style="border:1px solid">${s.label}</span>`;
+
+    const beatsEl = document.getElementById('detail-beats');
+    if (ch.beats && ch.beats.length) {
+      beatsEl.innerHTML = `<div class="text-xs text-outline uppercase tracking-wider mb-2">핵심 사건</div>` +
+        ch.beats.map(b => `<div class="flex items-center gap-2 text-sm text-on-surface-variant py-1">
+          <span class="mat-icon text-primary text-base">radio_button_checked</span>${b}
+        </div>`).join('');
+    } else {
+      beatsEl.innerHTML = '';
+    }
+
+    // Threads for this chapter
     const threads = appState.threads.filter(t => t.chapterId === ch.id);
-    document.getElementById('chapter-threads').innerHTML = threads.map(t => `
-      <div class="glass-bright rounded-xl p-3">
-        <p class="text-sm font-semibold text-white">${t.title}</p>
-        <p class="text-xs text-on-surface-variant">${t.desc || ''}</p>
-      </div>`).join('');
+    const threadsEl = document.getElementById('chapter-threads');
+    if (!threads.length) {
+      threadsEl.innerHTML = `<p class="text-sm text-outline py-2">이 회차에 등록된 복선/사건이 없습니다.</p>`;
+      return;
+    }
+    threadsEl.innerHTML = threads.map(t => threadCard(t, true)).join('');
+  }
+
+  function threadCard(t, compact = false) {
+    const statusCls = { planted: 's-planted', developing: 's-developing', resolved: 's-resolved' };
+    const statusLabel = { planted: '투척됨', developing: '전개 중', resolved: '회수됨' };
+    return `<div id="thread-${t.id}" class="thread-card glass rounded-xl p-3" draggable="true"
+      ondragstart="onDragStart(event, '${t.id}')">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <span class="text-xs px-2 py-0.5 rounded-full ${statusCls[t.status]}">${statusLabel[t.status]}</span>
+            <span class="text-xs text-outline">${t.type || '복선'}</span>
+          </div>
+          <p class="text-sm font-semibold text-on-surface">${t.title}</p>
+          ${t.desc && !compact ? `<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">${t.desc}</p>` : ''}
+        </div>
+        <button onclick="cycleThreadStatus('${t.id}')" class="mat-icon text-outline hover:text-on-surface transition-colors text-base shrink-0">sync</button>
+      </div>
+    </div>`;
+  }
+
+  function renderKanban() {
+    ['planted','developing','resolved'].forEach(status => {
+      const col = document.getElementById(`col-${status}`);
+      const threads = appState.threads.filter(t => t.status === status);
+      document.getElementById(`count-${status}`).textContent = threads.length;
+      col.innerHTML = threads.map(t => threadCard(t, false)).join('') ||
+        `<div class="text-center py-6 text-xs text-outline">드래그하여 추가</div>`;
+    });
+  }
+
+  // ─── Actions ──────────────────────────────
+  window.selectChapter = function(id) {
+    appState.selectedChapterId = id;
+    renderChapterList();
+    renderChapterDetail();
   };
 
-  window.selectChapter = id => { appState.selectedChapterId = id; renderAll(); };
-  window.openAddChapter = () => document.getElementById('chapter-modal').classList.remove('hidden');
-  window.addChapter = () => {
-    const ch = { id: 'ch-' + Date.now(), num: document.getElementById('new-chap-num').value, title: document.getElementById('new-chap-title').value, summary: document.getElementById('new-chap-summary').value };
-    saveChapterToDb(ch);
+  window.setView = function(view) {
+    appState.currentView = view;
+    document.getElementById('list-view').classList.toggle('hidden', view !== 'list');
+    document.getElementById('kanban-view').classList.toggle('hidden', view !== 'kanban');
+    document.getElementById('view-list').className = `px-3 py-1.5 text-xs font-semibold transition-all ${view==='list' ? 'bg-primary-dim/20 text-primary' : 'text-on-surface-variant'}`;
+    document.getElementById('view-kanban').className = `px-3 py-1.5 text-xs font-semibold transition-all ${view==='kanban' ? 'bg-primary-dim/20 text-primary' : 'text-on-surface-variant'}`;
+  };
+
+  window.openAddChapter = function() {
+    const next = Math.max(...appState.chapters.map(c => c.num), 0) + 1;
+    document.getElementById('new-chap-num').value = next;
+    document.getElementById('chapter-modal').classList.remove('hidden');
+  };
+
+  window.openAddThread = function() {
+    document.getElementById('thread-modal').classList.remove('hidden');
+  };
+
+  window.addChapter = function() {
+    const num = parseInt(document.getElementById('new-chap-num').value) || appState.chapters.length + 1;
+    const title = document.getElementById('new-chap-title').value.trim() || '(제목 없음)';
+    const status = document.getElementById('new-chap-status').value;
+    const summary = document.getElementById('new-chap-summary').value.trim();
+    const beatsRaw = document.getElementById('new-chap-beats').value;
+    const beats = beatsRaw ? beatsRaw.split(',').map(b => b.trim()).filter(Boolean) : [];
+
+    const ch = { id: 'ch-' + Date.now(), num, title, status, summary, beats };
+    appState.chapters.push(ch);
+    appState.chapters.sort((a,b) => a.num - b.num);
+    appState.selectedChapterId = ch.id;
+
+    window.saveChapterToDb && window.saveChapterToDb(ch);
+    renderAll();
     document.getElementById('chapter-modal').classList.add('hidden');
+    document.getElementById('new-chap-title').value = '';
+    document.getElementById('new-chap-summary').value = '';
+    document.getElementById('new-chap-beats').value = '';
   };
 
-  window.addEventListener('load', () => {
-    document.getElementById('sidebar-work-name').textContent = localStorage.getItem('sv_workName') || '내 작품';
-  });
+  window.addThread = function() {
+    const title = document.getElementById('new-thread-title').value.trim();
+    if (!title) return;
+    const thread = {
+      id: 'th-' + Date.now(),
+      title,
+      desc: document.getElementById('new-thread-desc').value.trim(),
+      type: appState.threadType,
+      status: document.getElementById('new-thread-status').value,
+      chapterId: appState.selectedChapterId,
+    };
+    appState.threads.push(thread);
+    window.saveThreadToDb && window.saveThreadToDb(thread);
+    renderAll();
+    document.getElementById('thread-modal').classList.add('hidden');
+    document.getElementById('new-thread-title').value = '';
+    document.getElementById('new-thread-desc').value = '';
+  };
+
+  window.cycleThreadStatus = function(id) {
+    const t = appState.threads.find(t => t.id === id);
+    if (!t) return;
+    const cycle = ['planted','developing','resolved'];
+    t.status = cycle[(cycle.indexOf(t.status) + 1) % cycle.length];
+    window.saveThreadToDb && window.saveThreadToDb(t);
+    renderAll();
+  };
+
+  window.setThreadType = function(el, type) {
+    appState.threadType = type;
+    document.querySelectorAll('.thread-type-btn').forEach(b => {
+      b.className = 'thread-type-btn flex-1 py-2 rounded-xl text-xs font-semibold text-on-surface-variant';
+      b.style.border = '1px solid rgba(184,162,255,0.15)';
+    });
+    el.className = 'thread-type-btn flex-1 py-2 rounded-xl text-xs font-semibold s-planted';
+    el.style.border = '';
+  };
+
+  // ─── Drag & Drop ──────────────────────────────
+  let draggedId = null;
+  window.onDragStart = function(e, id) { draggedId = id; e.currentTarget.classList.add('dragging'); };
+  window.onDragOver = function(e, col) { e.preventDefault(); document.getElementById(`col-${col}`).classList.add('drag-over'); };
+  window.onDrop = function(e, status) {
+    e.preventDefault();
+    document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
+    if (!draggedId) return;
+    const t = appState.threads.find(t => t.id === draggedId);
+    if (t) {
+      t.status = status;
+      window.saveThreadToDb && window.saveThreadToDb(t);
+      renderAll();
+    }
+    draggedId = null;
+  };
+
+  // Initial render with demo data will be called by Firebase module or loadDemoData
 </script>
+
 </body>
 </html>

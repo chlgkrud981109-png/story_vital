@@ -8,29 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&family=Noto+Serif+KR:wght@300;400;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 
-<script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-
-  // [EMERGENCY FIX] Hardcoded firebase config for production
-  const firebaseConfig = {
-    apiKey: "AIzaSyBEkQmeFG8XGxNuYDZof_3_9oOS4cEMOyk",
-    authDomain: "story-vital.firebaseapp.com",
-    projectId: "story-vital",
-    storageBucket: "story-vital.firebasestorage.app",
-    messagingSenderId: "872952700994",
-    appId: "1:872952700994:web:efa41cd38cd491fe5ccddb"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-
-  onAuthStateChanged(auth, user => {
-    if (!user) { location.href = 'index.html'; }
-    else { window.currentUser = user; }
-  });
-</script>
-
 <script>
   tailwind.config = {
     darkMode:'class',
@@ -39,22 +16,75 @@
 </script>
 
 <style>
-* { box-sizing:border-box; margin:0; padding:0; }
-.mat-icon { font-family:'Material Symbols Outlined'; font-style:normal; user-select:none; line-height:1; }
-body { background:#09090d; color:#eae6f4; font-family:'Manrope',sans-serif; overflow-x:hidden; }
-.glass-bright { background:rgba(26,26,33,0.85); backdrop-filter:blur(24px); border:1px solid rgba(184,162,255,0.12); }
-.nav-link { color:#9e9aaa; transition:color 0.15s; }
-.nav-active { color:#b8a2ff !important; }
-.sidebar-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; color:#9e9aaa; font-size:14px; transition:all 0.15s; cursor:pointer; text-decoration:none; }
-.sidebar-active { background:rgba(124,80,255,0.15); color:#b8a2ff; border-left:2px solid #7c50ff; padding-left:10px; }
-.inp { background:rgba(0,0,0,0.6); border:1px solid rgba(184,162,255,0.1); border-radius:10px; padding:10px 14px; color:#eae6f4; font-size:14px; width:100%; outline:none; transition:border-color 0.2s, box-shadow 0.2s; }
-.plat-card { border:1px solid rgba(184,162,255,0.1); border-radius:12px; padding:12px 14px; cursor:pointer; display:flex; align-items:center; gap:12px; }
-.plat-card.active { border-color:rgba(124,80,255,0.5); background:rgba(124,80,255,0.08); }
-@media(min-width:1024px) { .sidebar-desktop{display:flex} .ml-sidebar{margin-left:224px} }
+*{box-sizing:border-box;margin:0;padding:0}
+.mat-icon{font-family:'Material Symbols Outlined';font-style:normal;user-select:none;line-height:1}
+body{background:#09090d;color:#eae6f4;font-family:'Manrope',sans-serif;overflow-x:hidden}
+.glass{background:rgba(20,20,25,0.7);backdrop-filter:blur(20px);border:1px solid rgba(184,162,255,0.09)}
+.glass-bright{background:rgba(26,26,33,0.85);backdrop-filter:blur(24px);border:1px solid rgba(184,162,255,0.12)}
+.glow{box-shadow:0 0 24px rgba(124,80,255,0.35)}
+.nav-link{color:#9e9aaa;transition:color 0.15s}
+.nav-link:hover{color:#eae6f4}
+.nav-active{color:#b8a2ff!important}
+.sidebar-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:#9e9aaa;font-size:14px;transition:all 0.15s;cursor:pointer;text-decoration:none}
+.sidebar-item:hover{background:rgba(255,255,255,0.04);color:#eae6f4}
+.sidebar-active{background:rgba(124,80,255,0.15);color:#b8a2ff;border-left:2px solid #7c50ff;padding-left:10px}
+.inp{background:rgba(0,0,0,0.6);border:1px solid rgba(184,162,255,0.1);border-radius:10px;padding:10px 14px;color:#eae6f4;font-size:14px;width:100%;outline:none;transition:border-color 0.2s,box-shadow 0.2s;font-family:'Manrope',sans-serif}
+.inp:focus{border-color:#7c50ff;box-shadow:0 0 0 3px rgba(124,80,255,0.15)}
+.inp::placeholder{color:#5e5b68}
+select.inp option{background:#1a1a21}
+textarea.inp{font-family:'Noto Serif KR',serif;line-height:1.85;resize:none}
+
+/* Platform cards */
+.plat-card{border:1px solid rgba(184,162,255,0.1);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all 0.18s;display:flex;align-items:center;gap:12px}
+.plat-card:hover{border-color:rgba(184,162,255,0.25)}
+.plat-card.active{border-color:rgba(124,80,255,0.5);background:rgba(124,80,255,0.08)}
+
+/* Toggle switch */
+.toggle{position:relative;width:40px;height:22px;border-radius:11px;background:#36333f;border:1px solid rgba(184,162,255,0.15);transition:background 0.2s;cursor:pointer;flex-shrink:0}
+.toggle.on{background:#7c50ff;border-color:rgba(124,80,255,0.5)}
+.toggle-knob{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#9e9aaa;transition:all 0.2s}
+.toggle.on .toggle-knob{left:20px;background:#fff}
+
+/* Preset chips */
+.preset-chip{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;border:1px solid rgba(184,162,255,0.15);color:#9e9aaa;white-space:nowrap}
+.preset-chip:hover{border-color:rgba(184,162,255,0.3);color:#eae6f4}
+.preset-chip.active{background:rgba(124,80,255,0.2);color:#b8a2ff;border-color:rgba(124,80,255,0.4)}
+.preset-chip.custom{border-style:dashed}
+
+/* Char analysis */
+.analysis-bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.06);overflow:hidden;margin-top:4px}
+.analysis-fill{height:100%;border-radius:3px;transition:width 0.6s ease}
+
+/* Tab */
+.tab-btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;color:#9e9aaa}
+.tab-btn.active{background:rgba(124,80,255,0.2);color:#b8a2ff}
+
+/* History item */
+.hist-item{display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;transition:opacity 0.15s}
+.hist-item:hover{opacity:0.8}
+.hist-item+.hist-item{border-top:1px solid rgba(184,162,255,0.06)}
+
+/* Copy animation */
+@keyframes copyFlash{0%{transform:scale(1)}50%{transform:scale(1.04)}100%{transform:scale(1)}}
+.copy-flash{animation:copyFlash 0.3s ease}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(184,162,255,0.18);border-radius:4px}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp 0.4s ease forwards}
+.d1{animation-delay:0.06s;opacity:0}
+.d2{animation-delay:0.12s;opacity:0}
+
+@media(min-width:1024px){.sidebar-desktop{display:flex}.ml-sidebar{margin-left:224px}}
+@media(max-width:1023px){.sidebar-desktop{display:none}.ml-sidebar{margin-left:0}}
 </style>
 </head>
 
 <body>
+
+<!-- NAV -->
 <nav class="fixed top-0 left-0 right-0 z-[100] h-16 glass-bright flex items-center justify-between px-4 lg:px-6">
   <div class="flex items-center gap-3">
     <a href="index.html" class="flex items-center gap-2">
@@ -70,12 +100,20 @@ body { background:#09090d; color:#eae6f4; font-family:'Manrope',sans-serif; over
       <a href="export.html" class="nav-active font-semibold">내보내기</a>
     </div>
   </div>
+  <div class="flex items-center gap-2">
+    <div class="hidden sm:flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm" style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,162,255,0.1)">
+      <span class="mat-icon text-sm" style="color:#b8a2ff;font-size:15px">book</span>
+      <span class="text-white font-semibold text-xs" id="nav-work-name">마법사의 귀환</span>
+    </div>
+    <img src="https://api.dicebear.com/7.x/initials/svg?seed=작가&backgroundColor=7c50ff" alt="" class="w-8 h-8 rounded-full object-cover" style="border:1px solid rgba(124,80,255,0.4)"/>
+  </div>
 </nav>
 
+<!-- SIDEBAR -->
 <aside class="sidebar-desktop fixed left-0 top-16 bottom-0 w-56 flex-col py-5 z-50" style="background:#0e0e13;border-right:1px solid rgba(184,162,255,0.06)">
   <div class="px-4 mb-4">
     <p class="text-xs uppercase tracking-widest mb-1" style="color:#5e5b68">현재 작품</p>
-    <p class="font-display font-bold text-white text-sm" id="sidebar-work-name">-</p>
+    <p class="font-display font-bold text-white text-sm" id="sidebar-work-name">마법사의 귀환</p>
   </div>
   <nav class="flex-1 px-2 space-y-0.5">
     <a href="index.html" class="sidebar-item"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
@@ -85,62 +123,528 @@ body { background:#09090d; color:#eae6f4; font-family:'Manrope',sans-serif; over
   </nav>
 </aside>
 
+<!-- MAIN -->
 <main class="ml-sidebar pt-16 min-h-screen px-4 lg:px-8 py-7" style="padding-bottom:80px">
-  <div class="mb-5">
-    <h1 class="text-xl font-display font-extrabold text-white mb-1">플랫폼 맞춤 내보내기</h1>
+
+  <div class="mb-5 fade-up">
+    <h1 class="text-xl font-display font-extrabold text-white flex items-center gap-2 mb-1">
+      <span class="mat-icon" style="color:#b8a2ff">upload_file</span>
+      플랫폼 맞춤 내보내기
+    </h1>
     <p class="text-sm" style="color:#9e9aaa">원고를 붙여넣으면 플랫폼별 형식으로 즉시 변환합니다</p>
   </div>
 
+  <!-- PLATFORM PRESETS - saved settings -->
+  <div class="mb-5 fade-up">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-sm font-semibold text-white">저장된 플랫폼 설정</span>
+      <span class="text-xs" style="color:#9e9aaa">· 클릭하면 즉시 적용</span>
+    </div>
+    <div class="flex gap-2 flex-wrap" id="preset-list"></div>
+  </div>
+
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- LEFT -->
     <div class="space-y-4">
-      <div class="glass-bright rounded-xl p-5">
+
+      <!-- Platform selector -->
+      <div class="glass-bright rounded-xl p-5 fade-up d1">
         <h3 class="text-sm font-semibold text-white mb-3">플랫폼 선택</h3>
         <div class="grid grid-cols-2 gap-2" id="plat-list">
-          <div class="plat-card active" onclick="setPlatform('munpia')">📗 문피아</div>
-          <div class="plat-card" onclick="setPlatform('kakao')">🟡 카카오페이지</div>
+          <!-- rendered by JS -->
         </div>
       </div>
-      <div>
-        <textarea id="raw-input" rows="14" class="inp" placeholder="여기에 원고를 붙여넣으세요..." oninput="process()"></textarea>
+
+      <!-- Settings -->
+      <div class="glass rounded-xl p-5 fade-up d1">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-white flex items-center gap-1.5">
+            <span class="mat-icon text-base" style="color:#b8a2ff">tune</span>세부 설정
+          </h3>
+          <button onclick="saveCurrentPreset()" class="text-xs px-3 py-1.5 rounded-xl transition-all" style="background:rgba(124,80,255,0.1);color:#b8a2ff;border:1px solid rgba(124,80,255,0.25)">
+            설정 저장
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Line gap -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-white">문단 사이 빈 줄</p>
+              <p class="text-xs" style="color:#9e9aaa">단락 간격 조절</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="changeGap(-1)" class="w-7 h-7 rounded-lg flex items-center justify-center nav-link mat-icon text-base" style="background:rgba(255,255,255,0.06)">remove</button>
+              <span id="gap-val" class="text-white font-bold w-5 text-center">2</span>
+              <button onclick="changeGap(1)" class="w-7 h-7 rounded-lg flex items-center justify-center nav-link mat-icon text-base" style="background:rgba(255,255,255,0.06)">add</button>
+            </div>
+          </div>
+
+          <!-- Indent -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-white">들여쓰기</p>
+              <p class="text-xs" style="color:#9e9aaa">문단 첫 줄 들여쓰기 (　)</p>
+            </div>
+            <div class="toggle" id="tog-indent" onclick="toggleSetting('indent')"><div class="toggle-knob"></div></div>
+          </div>
+
+          <!-- Header -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-white">회차 헤더</p>
+              <p class="text-xs" style="color:#9e9aaa">상단에 회차 제목 삽입</p>
+            </div>
+            <div class="toggle on" id="tog-header" onclick="toggleSetting('header')"><div class="toggle-knob"></div></div>
+          </div>
+
+          <!-- Divider -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-white">구분선</p>
+              <p class="text-xs" style="color:#9e9aaa">씬 사이 구분선</p>
+            </div>
+            <select id="sel-divider" class="inp text-xs" style="padding:6px 10px;width:auto" onchange="process()">
+              <option value="none">없음</option>
+              <option value="***">***</option>
+              <option value="─────">─────</option>
+              <option value="◆">◆</option>
+              <option value="＊　＊　＊">＊　＊　＊</option>
+            </select>
+          </div>
+
+          <!-- Mobile spacing -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-white">모바일 최적화 공백</p>
+              <p class="text-xs" style="color:#9e9aaa">모바일 뷰어에서 답답함 방지</p>
+            </div>
+            <div class="toggle" id="tog-mobile" onclick="toggleSetting('mobile')"><div class="toggle-knob"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chapter info -->
+      <div class="glass rounded-xl p-5 fade-up d1">
+        <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-1.5">
+          <span class="mat-icon text-base" style="color:#b8a2ff">info</span>회차 정보
+        </h3>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">회차</label>
+            <input id="inp-num" type="text" placeholder="39" class="inp" oninput="process()"/>
+          </div>
+          <div>
+            <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">부제</label>
+            <input id="inp-subtitle" type="text" placeholder="붉은 달의 밤" class="inp" oninput="process()"/>
+          </div>
+        </div>
+        <div class="mt-3">
+          <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">작가 노트 (선택)</label>
+          <input id="inp-note" type="text" placeholder="이번 화 작가 노트..." class="inp" oninput="process()"/>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="fade-up d2">
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs uppercase tracking-wider" style="color:#5e5b68">원고 입력</label>
+          <div class="flex items-center gap-3 text-xs" style="color:#9e9aaa">
+            <span id="in-chars">0자</span>
+            <span id="in-paras">0문단</span>
+          </div>
+        </div>
+        <textarea id="raw-input" rows="14" class="inp" placeholder="여기에 원고를 붙여넣으세요...
+
+이현준은 오래된 기록을 손에 쥔 채 멍하니 서 있었다.
+
+낡은 양피지 위의 필체는 분명히 자신의 것과 달랐지만, 거기 적힌 이름 세 글자는 다를 바 없이 '이현준'이었다.
+
+'300년이라고.'
+
+그는 기억을 더듬었다." oninput="process()"></textarea>
+
+        <!-- Quick analysis -->
+        <div id="analysis-box" class="hidden mt-3 p-4 rounded-xl glass">
+          <p class="text-xs font-semibold text-white mb-3">✍️ 원고 분석</p>
+          <div class="space-y-2.5">
+            <div>
+              <div class="flex justify-between text-xs mb-1"><span style="color:#9e9aaa">대화 비율</span><span class="text-white font-semibold" id="a-dialogue">-</span></div>
+              <div class="analysis-bar"><div id="a-dialogue-bar" class="analysis-fill" style="background:#7c50ff;width:0%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1"><span style="color:#9e9aaa">평균 문단 길이</span><span class="text-white font-semibold" id="a-paralen">-</span></div>
+            </div>
+            <div id="a-readtime" class="text-xs" style="color:#9e9aaa"></div>
+          </div>
+        </div>
       </div>
     </div>
+
+    <!-- RIGHT -->
     <div class="space-y-4">
-      <div>
-        <div class="flex justify-between mb-2">
-          <span class="text-xs text-gray-400" id="out-chars">0자</span>
-          <button onclick="copyOutput()" class="bg-[#7c50ff] text-white px-4 py-2 rounded-xl text-xs font-bold">복사</button>
+
+      <!-- Platform tip -->
+      <div id="plat-tip" class="glass rounded-xl p-4 flex items-center gap-3 fade-up">
+        <span class="mat-icon text-xl" style="color:#b8a2ff">info</span>
+        <div>
+          <p id="tip-title" class="text-sm font-semibold text-white">문피아 최적화</p>
+          <p id="tip-desc" class="text-xs" style="color:#9e9aaa">문단 2줄 간격 · 모바일 뷰어 최적화</p>
         </div>
-        <textarea id="out-text" rows="22" readonly class="inp font-serif text-sm"></textarea>
+      </div>
+
+      <!-- Output tabs -->
+      <div class="fade-up d1">
+        <div class="flex items-center gap-1 mb-3">
+          <button onclick="setTab('output')" class="tab-btn active" id="tab-output">변환 결과</button>
+          <button onclick="setTab('history')" class="tab-btn" id="tab-history">내보내기 기록</button>
+        </div>
+
+        <!-- Output -->
+        <div id="pane-output">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-xs" style="color:#9e9aaa">
+              <span id="out-chars">0자</span> · <span id="out-read">0분</span>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="copyOutput()" id="copy-btn"
+                class="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white glow" style="background:#7c50ff">
+                <span class="mat-icon text-sm">content_copy</span>복사
+              </button>
+              <button onclick="saveToHistory()" class="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold nav-link"
+                style="border:1px solid rgba(184,162,255,0.15)">
+                <span class="mat-icon text-sm">save</span>저장
+              </button>
+            </div>
+          </div>
+          <textarea id="out-text" rows="22" readonly class="inp" style="cursor:text;line-height:1.9;font-family:'Noto Serif KR',serif;font-size:13px"></textarea>
+        </div>
+
+        <!-- History -->
+        <div id="pane-history" class="hidden">
+          <div class="glass rounded-xl p-4" style="min-height:200px">
+            <div id="history-list">
+              <div class="text-center py-8" style="color:#5e5b68">
+                <span class="mat-icon block mb-2" style="font-size:36px">history</span>
+                <p class="text-sm">저장된 기록이 없습니다</p>
+                <p class="text-xs mt-1">변환 후 '저장' 버튼을 누르세요</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-3 gap-3 fade-up d2">
+        <div class="glass rounded-xl p-3 text-center">
+          <div class="text-xs mb-1" style="color:#5e5b68">총 글자</div>
+          <div class="text-lg font-display font-bold text-white" id="st-chars">0</div>
+        </div>
+        <div class="glass rounded-xl p-3 text-center">
+          <div class="text-xs mb-1" style="color:#5e5b68">예상 읽기</div>
+          <div class="text-lg font-display font-bold text-white" id="st-read">0분</div>
+        </div>
+        <div class="glass rounded-xl p-3 text-center">
+          <div class="text-xs mb-1" style="color:#5e5b68">분량 평가</div>
+          <div class="text-lg font-display font-bold" id="st-eval">-</div>
+        </div>
+      </div>
+
+      <!-- Writing tips -->
+      <div class="glass rounded-xl p-5 fade-up d2">
+        <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-1.5">
+          <span class="mat-icon text-base" style="color:#ff9bbf">lightbulb</span>
+          <span id="tip-plat-name">문피아</span> 연재 팁
+        </h3>
+        <ul id="tips-list" class="space-y-2"></ul>
       </div>
     </div>
   </div>
 </main>
 
+<!-- MOBILE NAV -->
+<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-[90] h-16 flex items-center justify-around" style="background:rgba(9,9,13,0.95);border-top:1px solid rgba(184,162,255,0.08)">
+  <a href="index.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">dashboard</span><span style="font-size:10px">홈</span></a>
+  <a href="characters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">group</span><span style="font-size:10px">캐릭터</span></a>
+  <a href="chapters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">auto_stories</span><span style="font-size:10px">챕터</span></a>
+  <a href="export.html" class="flex flex-col items-center gap-1" style="color:#b8a2ff"><span class="mat-icon text-xl">upload_file</span><span style="font-size:10px">내보내기</span></a>
+</nav>
+
 <script>
-window.setPlatform = (p) => {
-  document.querySelectorAll('.plat-card').forEach(c => c.classList.remove('active'));
-  localStorage.setItem('sv_exp_plat', p);
+// ─── Platform config ──────────────────────────────
+const PLATFORMS = {
+  munpia:   { emoji:'📗', name:'문피아', shortDesc:'2줄 · 모바일 최적', gap:2, indent:false, header:true, mobile:false, tips:['첫 문장이 독자 유입의 80%를 결정합니다. 강렬하게 시작하세요.','회차당 5,000~8,000자가 독자 만족도 최상위 구간입니다.','클리프행어로 마무리 시 다음 화 조회수 평균 28% 상승.','리뷰에 답글을 달면 독자 이탈률이 크게 줄어듭니다.'] },
+  naver:    { emoji:'💚', name:'네이버 시리즈', shortDesc:'1줄 · 짧고 빠른 호흡', gap:1, indent:false, header:true, mobile:false, tips:['네이버 시리즈는 3,000~5,000자 짧은 호흡을 선호합니다.','댓글/좋아요 응답률이 독자 리텐션에 직접 영향 줍니다.','연재 요일 고정 시 독자 방문 패턴이 형성됩니다.','첫 10화 무료 공개가 전환율을 높이는 황금 공식입니다.'] },
+  kakao:    { emoji:'🟡', name:'카카오페이지', shortDesc:'2줄 + 들여쓰기 · 유료화 최적', gap:2, indent:true, header:true, mobile:true, tips:['카카오페이지 독자는 빠른 전개와 감정 폭발을 선호합니다.','기다리면 무료 시스템 고려 시 매일 업데이트가 권장됩니다.','회차당 8,000~12,000자가 결제 전환율을 높입니다.','주인공 고통→성장 사이클이 별점 상승에 효과적입니다.'] },
+  joara:    { emoji:'📘', name:'조아라', shortDesc:'1줄 · 장르 커뮤니티 중심', gap:1, indent:false, header:true, mobile:false, tips:['조아라 커뮤니티는 독자-작가 소통을 중요시합니다.','시리즈 누적 분량이 검색 노출 순위에 영향을 줍니다.','연재 스케줄 공지가 이탈률을 크게 낮춥니다.','장르 특화 해시태그 활용으로 신규 독자를 유입할 수 있습니다.'] },
+  munpiapc: { emoji:'🖥️', name:'문피아 PC', shortDesc:'넓은 뷰어 · 긴 문단', gap:1, indent:false, header:true, mobile:false, tips:['PC 뷰어는 긴 문단도 읽기 편합니다.','한 문단 최대 6~8줄이 PC 환경에 적합합니다.','대화문 앞 화자 표시 습관이 PC 독자에게 친절합니다.','중간 소제목 활용으로 긴 회차 가독성을 높일 수 있습니다.'] },
+};
+
+// ─── State ──────────────────────────────
+let cfg = {
+  platform: localStorage.getItem('sv_exp_plat') || 'munpia',
+  gap: 2, indent: false, header: true, mobile: false,
+};
+let exportHistory = JSON.parse(localStorage.getItem('sv_exp_history') || '[]');
+let savedPresets = JSON.parse(localStorage.getItem('sv_exp_presets') || '[]');
+
+// ─── Init ──────────────────────────────
+window.addEventListener('load', () => {
+  renderPlatformCards();
+  renderPresets();
+  renderTips();
+  applyPlatformCfg(cfg.platform);
+  renderHistory();
+  document.getElementById('nav-work-name').textContent = localStorage.getItem('sv_workName') || '마법사의 귀환';
+  process();
+});
+
+function renderPlatformCards() {
+  const list = document.getElementById('plat-list');
+  list.innerHTML = Object.entries(PLATFORMS).map(([key, p]) => `
+    <div id="plat-${key}" class="plat-card ${key===cfg.platform?'active':''}" onclick="setPlatform('${key}')">
+      <span style="font-size:20px">${p.emoji}</span>
+      <div>
+        <p class="text-sm font-semibold text-white">${p.name}</p>
+        <p class="text-xs" style="color:#9e9aaa">${p.shortDesc}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+function applyPlatformCfg(key) {
+  const p = PLATFORMS[key];
+  if (!p) return;
+  cfg.gap = p.gap; cfg.indent = p.indent; cfg.header = p.header; cfg.mobile = p.mobile;
+  document.getElementById('gap-val').textContent = cfg.gap;
+  setToggle('tog-indent', cfg.indent);
+  setToggle('tog-header', cfg.header);
+  setToggle('tog-mobile', cfg.mobile);
+  document.getElementById('tip-title').textContent = p.name + ' 최적화';
+  document.getElementById('tip-desc').textContent = p.shortDesc;
+  document.getElementById('tip-plat-name').textContent = p.name;
+  renderTips(key);
+  process();
+}
+
+function renderTips(key) {
+  key = key || cfg.platform;
+  const tips = PLATFORMS[key]?.tips || [];
+  document.getElementById('tips-list').innerHTML = tips.map(t => `
+    <li class="flex items-start gap-2 text-xs" style="color:#9e9aaa">
+      <span class="mat-icon text-sm flex-shrink-0 mt-0.5" style="color:#b8a2ff">check_circle</span>
+      <span>${t}</span>
+    </li>
+  `).join('');
+}
+
+function setToggle(id, on) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('on', on);
+}
+
+// ─── Actions ──────────────────────────────
+window.setPlatform = function(key) {
+  cfg.platform = key;
+  localStorage.setItem('sv_exp_plat', key);
+  renderPlatformCards();
+  applyPlatformCfg(key);
+};
+
+window.changeGap = function(delta) {
+  cfg.gap = Math.max(0, Math.min(4, cfg.gap + delta));
+  document.getElementById('gap-val').textContent = cfg.gap;
   process();
 };
 
-window.process = () => {
+window.toggleSetting = function(key) {
+  cfg[key] = !cfg[key];
+  setToggle('tog-'+key, cfg[key]);
+  process();
+};
+
+// ─── Main process ──────────────────────────────
+window.process = function() {
   const raw = document.getElementById('raw-input').value;
-  localStorage.setItem('sv_exp_raw', raw);
-  const out = raw.split('\n').map(l => l.trim()).join('\n\n'); 
+  const paras = raw.split(/\n+/).map(p => p.trim()).filter(Boolean);
+
+  // Input stats
+  const rawChars = raw.replace(/\s/g,'').length;
+  document.getElementById('in-chars').textContent = rawChars.toLocaleString() + '자';
+  document.getElementById('in-paras').textContent = paras.length + '문단';
+
+  // Analysis
+  if (rawChars > 0) {
+    document.getElementById('analysis-box').classList.remove('hidden');
+    const dialogueParas = paras.filter(p => p.startsWith('"') || p.startsWith('"') || p.startsWith('"') || p.startsWith('\'') || p.match(/^[""「]/));
+    const dialoguePct = Math.round(dialogueParas.length / Math.max(paras.length,1) * 100);
+    document.getElementById('a-dialogue').textContent = dialoguePct + '%';
+    document.getElementById('a-dialogue-bar').style.width = dialoguePct + '%';
+    const avgLen = paras.length ? Math.round(rawChars / paras.length) : 0;
+    document.getElementById('a-paralen').textContent = avgLen + '자/문단';
+    document.getElementById('a-readtime').textContent = `평균 읽기 속도 700자/분 기준 약 ${Math.ceil(rawChars/700)}분`;
+  } else {
+    document.getElementById('analysis-box').classList.add('hidden');
+  }
+
+  // Build output
+  let out = '';
+  const num = document.getElementById('inp-num').value.trim();
+  const subtitle = document.getElementById('inp-subtitle').value.trim();
+  const note = document.getElementById('inp-note').value.trim();
+
+  if (cfg.header && (num || subtitle)) {
+    out += `${num?num+'화':''}${num&&subtitle?' ':''}${subtitle}\n`;
+    out += '\n'.repeat(cfg.gap);
+  }
+
+  const nl = '\n'.repeat(cfg.gap + 1);
+
+  out += paras.map((p, i) => {
+    let line = cfg.indent ? '\u3000' + p : p;
+    // Mobile spacing: add extra line after longer paragraphs
+    if (cfg.mobile && p.replace(/\s/g,'').length > 80 && i < paras.length - 1) {
+      line += '\n';
+    }
+    return line;
+  }).join(nl);
+
+  if (note) {
+    out += '\n\n' + nl + '────────────────\n' + note;
+  }
+
   document.getElementById('out-text').value = out;
-  document.getElementById('out-chars').textContent = out.length + '자';
+
+  // Output stats
+  const outChars = out.replace(/\s/g,'').length;
+  const readMin = Math.ceil(outChars / 700);
+  document.getElementById('out-chars').textContent = outChars.toLocaleString() + '자';
+  document.getElementById('out-read').textContent = readMin + '분';
+  document.getElementById('st-chars').textContent = outChars.toLocaleString();
+  document.getElementById('st-read').textContent = readMin + '분';
+
+  // Eval
+  const evalEl = document.getElementById('st-eval');
+  if (outChars === 0) { evalEl.textContent = '-'; evalEl.style.color = '#5e5b68'; }
+  else if (outChars < 2000) { evalEl.textContent = '짧음'; evalEl.style.color = '#e8587a'; }
+  else if (outChars < 5000) { evalEl.textContent = '적정'; evalEl.style.color = '#40d0a8'; }
+  else if (outChars < 10000) { evalEl.textContent = '충분'; evalEl.style.color = '#b8a2ff'; }
+  else { evalEl.textContent = '풍부'; evalEl.style.color = '#c490ff'; }
 };
 
-window.copyOutput = () => {
+window.copyOutput = function() {
   const text = document.getElementById('out-text').value;
-  navigator.clipboard.writeText(text).then(() => alert('복사되었습니다.'));
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.innerHTML = '<span class="mat-icon text-sm">check</span>복사됨!';
+    btn.style.background = 'rgba(64,208,168,0.8)';
+    btn.classList.add('copy-flash');
+    setTimeout(() => {
+      btn.innerHTML = '<span class="mat-icon text-sm">content_copy</span>복사';
+      btn.style.background = '#7c50ff';
+      btn.classList.remove('copy-flash');
+    }, 2000);
+  });
 };
 
-window.addEventListener('load', () => {
-  document.getElementById('sidebar-work-name').textContent = localStorage.getItem('sv_workName') || '-';
-  const savedRaw = localStorage.getItem('sv_exp_raw');
-  if (savedRaw) { document.getElementById('raw-input').value = savedRaw; process(); }
-});
+// ─── History ──────────────────────────────
+window.saveToHistory = function() {
+  const text = document.getElementById('out-text').value;
+  if (!text) return;
+  const item = {
+    id: Date.now(),
+    platform: PLATFORMS[cfg.platform]?.name || cfg.platform,
+    num: document.getElementById('inp-num').value,
+    subtitle: document.getElementById('inp-subtitle').value,
+    chars: text.replace(/\s/g,'').length,
+    text,
+    savedAt: new Date().toLocaleString('ko-KR'),
+  };
+  exportHistory.unshift(item);
+  if (exportHistory.length > 20) exportHistory.pop();
+  localStorage.setItem('sv_exp_history', JSON.stringify(exportHistory));
+  renderHistory();
+  setTab('history');
+};
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!exportHistory.length) {
+    list.innerHTML = `<div class="text-center py-8" style="color:#5e5b68"><span class="mat-icon block mb-2" style="font-size:36px">history</span><p class="text-sm">저장된 기록이 없습니다</p><p class="text-xs mt-1">변환 후 '저장' 버튼을 누르세요</p></div>`;
+    return;
+  }
+  list.innerHTML = exportHistory.map(h => `
+    <div class="hist-item" onclick="loadHistory(${h.id})">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(124,80,255,0.15)">
+        <span class="mat-icon text-sm" style="color:#b8a2ff">article</span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-white truncate">${h.num?h.num+'화 ':''}"${h.subtitle||'(제목없음)'}"</p>
+        <p class="text-xs" style="color:#9e9aaa">${h.platform} · ${h.chars.toLocaleString()}자 · ${h.savedAt}</p>
+      </div>
+      <button onclick="event.stopPropagation();deleteHistory(${h.id})" class="mat-icon text-base nav-link">delete</button>
+    </div>
+  `).join('');
+}
+
+window.loadHistory = function(id) {
+  const item = exportHistory.find(h => h.id === id);
+  if (!item) return;
+  document.getElementById('out-text').value = item.text;
+  setTab('output');
+};
+
+window.deleteHistory = function(id) {
+  exportHistory = exportHistory.filter(h => h.id !== id);
+  localStorage.setItem('sv_exp_history', JSON.stringify(exportHistory));
+  renderHistory();
+};
+
+// ─── Presets ──────────────────────────────
+window.saveCurrentPreset = function() {
+  const name = prompt('설정 이름을 입력하세요:');
+  if (!name) return;
+  const preset = { id: Date.now(), name, platform: cfg.platform, gap: cfg.gap, indent: cfg.indent, header: cfg.header, mobile: cfg.mobile };
+  savedPresets.push(preset);
+  localStorage.setItem('sv_exp_presets', JSON.stringify(savedPresets));
+  renderPresets();
+};
+
+function renderPresets() {
+  const list = document.getElementById('preset-list');
+  const items = [
+    ...Object.entries(PLATFORMS).slice(0,4).map(([key,p]) => `<button onclick="setPlatform('${key}')" class="preset-chip ${key===cfg.platform?'active':''}">${p.emoji} ${p.name}</button>`),
+    ...savedPresets.map(p => `<button onclick="applyPreset(${p.id})" class="preset-chip custom">⚙️ ${p.name}</button>`),
+    `<button onclick="saveCurrentPreset()" class="preset-chip custom"><span style="font-size:13px">+</span> 현재 설정 저장</button>`,
+  ];
+  list.innerHTML = items.join('');
+}
+
+window.applyPreset = function(id) {
+  const p = savedPresets.find(p => p.id === id);
+  if (!p) return;
+  cfg.platform = p.platform; cfg.gap = p.gap; cfg.indent = p.indent; cfg.header = p.header; cfg.mobile = p.mobile;
+  renderPlatformCards();
+  document.getElementById('gap-val').textContent = cfg.gap;
+  setToggle('tog-indent', cfg.indent);
+  setToggle('tog-header', cfg.header);
+  setToggle('tog-mobile', cfg.mobile);
+  renderTips();
+  renderPresets();
+  process();
+};
+
+// ─── Tabs ──────────────────────────────
+window.setTab = function(tab) {
+  ['output','history'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t===tab);
+    document.getElementById(`pane-${t}`).classList.toggle('hidden', t!==tab);
+  });
+};
 </script>
+
 </body>
 </html>
