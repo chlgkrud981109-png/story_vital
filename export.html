@@ -12,13 +12,14 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
+  // [EMERGENCY FIX] Hardcoded firebase config for production
   const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID
+    apiKey: "AIzaSyBEkQmeFG8XGxNuYDZof_3_9oOS4cEMOyk",
+    authDomain: "story-vital.firebaseapp.com",
+    projectId: "story-vital",
+    storageBucket: "story-vital.firebasestorage.app",
+    messagingSenderId: "872952700994",
+    appId: "1:872952700994:web:efa41cd38cd491fe5ccddb"
   };
 
   const app = initializeApp(firebaseConfig);
@@ -41,17 +42,14 @@
 * { box-sizing:border-box; margin:0; padding:0; }
 .mat-icon { font-family:'Material Symbols Outlined'; font-style:normal; user-select:none; line-height:1; }
 body { background:#09090d; color:#eae6f4; font-family:'Manrope',sans-serif; overflow-x:hidden; }
-.glass { background:rgba(20,20,25,0.7); backdrop-filter:blur(20px); border:1px solid rgba(184,162,255,0.09); }
 .glass-bright { background:rgba(26,26,33,0.85); backdrop-filter:blur(24px); border:1px solid rgba(184,162,255,0.12); }
 .nav-link { color:#9e9aaa; transition:color 0.15s; }
 .nav-active { color:#b8a2ff !important; }
 .sidebar-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; color:#9e9aaa; font-size:14px; transition:all 0.15s; cursor:pointer; text-decoration:none; }
 .sidebar-active { background:rgba(124,80,255,0.15); color:#b8a2ff; border-left:2px solid #7c50ff; padding-left:10px; }
-.inp { background:rgba(0,0,0,0.6); border:1px solid rgba(184,162,255,0.1); border-radius:10px; padding:10px 14px; color:#eae6f4; font-size:14px; width:100%; outline:none; transition:border-color 0.2s,box-shadow 0.2s; font-family:'Manrope',sans-serif; }
-.plat-card { border:1px solid rgba(184,162,255,0.1); border-radius:12px; padding:12px 14px; cursor:pointer; transition:all 0.18s; display:flex; align-items:center; gap:12px; }
+.inp { background:rgba(0,0,0,0.6); border:1px solid rgba(184,162,255,0.1); border-radius:10px; padding:10px 14px; color:#eae6f4; font-size:14px; width:100%; outline:none; transition:border-color 0.2s, box-shadow 0.2s; }
+.plat-card { border:1px solid rgba(184,162,255,0.1); border-radius:12px; padding:12px 14px; cursor:pointer; display:flex; align-items:center; gap:12px; }
 .plat-card.active { border-color:rgba(124,80,255,0.5); background:rgba(124,80,255,0.08); }
-@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-.fade-up { animation:fadeUp 0.4s ease forwards; }
 @media(min-width:1024px) { .sidebar-desktop{display:flex} .ml-sidebar{margin-left:224px} }
 </style>
 </head>
@@ -88,26 +86,26 @@ body { background:#09090d; color:#eae6f4; font-family:'Manrope',sans-serif; over
 </aside>
 
 <main class="ml-sidebar pt-16 min-h-screen px-4 lg:px-8 py-7" style="padding-bottom:80px">
-  <div class="mb-5 fade-up">
+  <div class="mb-5">
     <h1 class="text-xl font-display font-extrabold text-white mb-1">플랫폼 맞춤 내보내기</h1>
     <p class="text-sm" style="color:#9e9aaa">원고를 붙여넣으면 플랫폼별 형식으로 즉시 변환합니다</p>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
     <div class="space-y-4">
-      <div class="glass-bright rounded-xl p-5 fade-up">
+      <div class="glass-bright rounded-xl p-5">
         <h3 class="text-sm font-semibold text-white mb-3">플랫폼 선택</h3>
         <div class="grid grid-cols-2 gap-2" id="plat-list">
           <div class="plat-card active" onclick="setPlatform('munpia')">📗 문피아</div>
           <div class="plat-card" onclick="setPlatform('kakao')">🟡 카카오페이지</div>
         </div>
       </div>
-      <div class="fade-up">
+      <div>
         <textarea id="raw-input" rows="14" class="inp" placeholder="여기에 원고를 붙여넣으세요..." oninput="process()"></textarea>
       </div>
     </div>
     <div class="space-y-4">
-      <div class="fade-up">
+      <div>
         <div class="flex justify-between mb-2">
           <span class="text-xs text-gray-400" id="out-chars">0자</span>
           <button onclick="copyOutput()" class="bg-[#7c50ff] text-white px-4 py-2 rounded-xl text-xs font-bold">복사</button>
@@ -122,14 +120,13 @@ body { background:#09090d; color:#eae6f4; font-family:'Manrope',sans-serif; over
 window.setPlatform = (p) => {
   document.querySelectorAll('.plat-card').forEach(c => c.classList.remove('active'));
   localStorage.setItem('sv_exp_plat', p);
-  // Add active class logic here
   process();
 };
 
 window.process = () => {
   const raw = document.getElementById('raw-input').value;
   localStorage.setItem('sv_exp_raw', raw);
-  const out = raw.split('\n').map(l => l.trim()).join('\n\n'); // Simple transform for example
+  const out = raw.split('\n').map(l => l.trim()).join('\n\n'); 
   document.getElementById('out-text').value = out;
   document.getElementById('out-chars').textContent = out.length + '자';
 };

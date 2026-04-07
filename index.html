@@ -13,21 +13,31 @@
   import { getFirestore, collection, addDoc, getDocs, doc, query, where, onSnapshot, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
+  // [EMERGENCY FIX] Hardcoded firebase config for production
   const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID
+    apiKey: "AIzaSyBEkQmeFG8XGxNuYDZof_3_9oOS4cEMOyk",
+    authDomain: "story-vital.firebaseapp.com",
+    projectId: "story-vital",
+    storageBucket: "story-vital.firebasestorage.app",
+    messagingSenderId: "872952700994",
+    appId: "1:872952700994:web:efa41cd38cd491fe5ccddb"
   };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const auth = getAuth(app);
 
-  // --- Auth & Initial Load ---
-  onAuthStateChanged(auth, async (user) => {
+  // Initialize global data object immediately to avoid reference errors
+  window.appData = {
+    works: [],
+    activeWorkId: localStorage.getItem('sv_activeWork') || null,
+    todayChars: parseInt(localStorage.getItem('sv_todayChars') || '0'),
+    dailyGoal: 5000,
+    user: null
+  };
+
+  // Auth Guard - Highest Priority
+  onAuthStateChanged(auth, (user) => {
     if (user) {
       window.appData.user = user;
       const projectsRef = collection(db, 'projects');
@@ -40,7 +50,6 @@
         if (projects.length === 0) {
           showOnboarding();
         } else {
-          // If no active work, pick first
           if (!window.appData.activeWorkId || !projects.find(p => p.id === window.appData.activeWorkId)) {
             window.appData.activeWorkId = projects[0].id;
             localStorage.setItem('sv_activeWork', projects[0].id);
@@ -68,6 +77,10 @@
       return docRef.id;
     } catch(e) { console.error(e); return null; }
   };
+
+  // Expose methods for UI
+  window.db = db;
+  window.auth = auth;
 </script>
 
 <script>
@@ -127,19 +140,9 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
 .work-option { padding: 10px 14px; cursor: pointer; transition: background 0.15s; border-radius: 8px; margin: 4px; }
 .work-option:hover { background: rgba(255,255,255,0.04); }
 .work-option.active { background: rgba(124,80,255,0.1); }
-.streak-cell { width: 12px; height: 12px; border-radius: 2px; background: rgba(255,255,255,0.05); }
-.streak-cell.active { background: #7c50ff; box-shadow: 0 0 8px rgba(124,80,255,0.5); }
-.streak-cell.partial { background: rgba(124,80,255,0.3); }
-.streak-cell.today { border: 1px solid #b8a2ff; }
-.thread-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px; border-radius: 12px; transition: background 0.15s; }
-.thread-item:hover { background: rgba(255,255,255,0.04); }
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 .fade-up { animation: fadeUp 0.5s ease forwards; }
-.d1 { animation-delay: 0.1s; opacity: 0; }
-.d2 { animation-delay: 0.2s; opacity: 0; }
-.d3 { animation-delay: 0.3s; opacity: 0; }
-.d4 { animation-delay: 0.4s; opacity: 0; }
 
 @media (min-width: 1024px) { .sidebar-desktop { display: flex; } .ml-sidebar { margin-left: 224px; } }
 @media (max-width: 1023px) { .sidebar-desktop { display: none; } .ml-sidebar { margin-left: 0; } }
@@ -160,14 +163,12 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/layout/google.svg" width="18" alt=""/>
       Google로 시작하기
     </button>
-    <p class="text-xs" style="color: #5e5b68">로그인 시 이용약관 및 개인정보 처리방침에 동의하게 됩니다.</p>
   </div>
 </div>
 
 <!-- ═══════ ONBOARDING ═══════ -->
 <div id="onboarding-screen" class="min-h-screen flex items-center justify-center p-6 bg-[#09090d] hidden">
   <div class="w-full max-w-md">
-    <!-- Step dots -->
     <div class="flex justify-center gap-2 mb-8">
       <div id="sdot-1" class="w-2 h-2 rounded-full active" style="background:#5e5b68"></div>
       <div id="sdot-2" class="w-2 h-2 rounded-full" style="background:#5e5b68"></div>
@@ -180,28 +181,12 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
         <span class="mat-icon text-white" style="font-size:28px">auto_stories</span>
       </div>
       <h2 class="text-2xl font-display font-extrabold text-white mb-3">환영합니다, 작가님!</h2>
-      <p class="text-sm leading-relaxed mb-6" style="color:#9e9aaa"> StoryVital은 웹소설 연재 작가를 위한 설정 관리 도구입니다.<br/>처음 방문이시군요. 빠르게 시작할 수 있도록 안내해드릴게요. </p>
-      <div class="space-y-3 text-left mb-6">
-        <div class="flex items-center gap-3 p-3 rounded-xl" style="background: rgba(124,80,255,0.08); border: 1px solid rgba(124,80,255,0.15)">
-          <span class="mat-icon text-2xl" style="color:#b8a2ff">group</span>
-          <div><p class="text-sm font-semibold text-white">캐릭터 DB</p><p class="text-xs" style="color:#9e9aaa">외모·성격·능력·관계 한 번에 관리</p></div>
-        </div>
-        <div class="flex items-center gap-3 p-3 rounded-xl" style="background: rgba(232,88,122,0.07); border: 1px solid rgba(232,88,122,0.15)">
-          <span class="mat-icon text-2xl" style="color:#ff9bbf">commit</span>
-          <div><p class="text-sm font-semibold text-white">복선 트래커</p><p class="text-xs" style="color:#9e9aaa">투척한 복선을 절대 잊지 않도록</p></div>
-        </div>
-        <div class="flex items-center gap-3 p-3 rounded-xl" style="background: rgba(64,208,168,0.07); border: 1px solid rgba(64,208,168,0.15)">
-          <span class="mat-icon text-2xl" style="color:#40d0a8">upload_file</span>
-          <div><p class="text-sm font-semibold text-white">플랫폼 내보내기</p><p class="text-xs" style="color:#9e9aaa">문피아·네이버·카카오 맞춤 변환</p></div>
-        </div>
-      </div>
       <button onclick="goObStep(2)" class="w-full py-3 rounded-xl font-semibold text-white text-sm glow-primary" style="background: #7c50ff"> 시작하기 → </button>
     </div>
 
     <!-- Step 2: Create first work -->
     <div id="ob-step-2" class="hidden glass-bright rounded-2xl p-8 fade-in">
       <h2 class="text-xl font-display font-extrabold text-white mb-1">첫 작품을 만들어볼까요?</h2>
-      <p class="text-sm mb-6" style="color:#9e9aaa">나중에 언제든 수정하거나 추가할 수 있어요.</p>
       <div class="space-y-4">
         <div>
           <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">작품 제목 *</label>
@@ -229,10 +214,6 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
             </select>
           </div>
         </div>
-        <div>
-          <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">일일 목표 (자)</label>
-          <input id="ob-daily-goal" type="number" placeholder="5000" class="inp" value="5000"/>
-        </div>
       </div>
       <div class="flex gap-3 mt-6">
         <button onclick="goObStep(1)" class="flex-1 py-3 rounded-xl text-sm" style="border:1px solid rgba(184,162,255,0.15);color:#9e9aaa">이전</button>
@@ -246,7 +227,6 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
         <span class="mat-icon" style="font-size:28px;color:#40d0a8">check</span>
       </div>
       <h2 class="text-xl font-display font-extrabold text-white mb-2">준비 완료!</h2>
-      <p class="text-sm mb-6" style="color:#9e9aaa">작품이 생성됐어요. 이제 캐릭터를 추가하거나 챕터를 기록해보세요.</p>
       <button onclick="enterApp()" class="w-full py-3 rounded-xl font-semibold text-white text-sm glow-primary" style="background:#7c50ff"> 대시보드로 → </button>
     </div>
   </div>
@@ -277,7 +257,7 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
       <div class="work-switcher" id="work-switcher">
         <button onclick="toggleWorkDropdown()" class="flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all" style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,162,255,0.12)">
           <span class="mat-icon text-sm" style="color:#b8a2ff;font-size:16px">book</span>
-          <span id="active-work-name" class="font-semibold text-white max-w-[120px] truncate hidden sm:block">작품 로딩중...</span>
+          <span id="active-work-name" class="font-semibold text-white max-w-[120px] truncate hidden sm:block">작품 선택</span>
           <span class="mat-icon text-sm" style="color:#9e9aaa;font-size:16px" id="switcher-arrow">expand_more</span>
         </button>
         <div id="work-dropdown" class="work-dropdown">
@@ -289,16 +269,15 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
           </div>
         </div>
       </div>
-      <img id="user-avatar" src="" alt="" class="w-8 h-8 rounded-full object-cover cursor-pointer" style="border:1px solid rgba(124,80,255,0.4)" onclick="signOutUser()"/>
+      <img id="user-avatar" src="" alt="" class="w-8 h-8 rounded-full object-cover cursor-pointer" onclick="signOutUser()"/>
     </div>
   </nav>
 
-  <!-- SIDEBAR (DESKTOP) -->
+  <!-- SIDEBAR -->
   <aside class="sidebar-desktop fixed left-0 top-16 bottom-0 w-56 flex-col py-5 z-50" style="background:#0e0e13;border-right:1px solid rgba(184,162,255,0.06)">
     <div class="px-4 mb-4">
       <p class="text-xs uppercase tracking-widest mb-1" style="color:#5e5b68">현재 작품</p>
       <p class="font-display font-bold text-white text-sm leading-snug" id="sidebar-work-name">-</p>
-      <p class="text-xs mt-0.5" style="color:#9e9aaa" id="sidebar-work-status">-</p>
     </div>
     <nav class="flex-1 px-2 space-y-0.5">
       <a href="index.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
@@ -314,92 +293,29 @@ body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; 
   <!-- MAIN CONTENT -->
   <main class="ml-sidebar pt-16 min-h-screen px-4 lg:px-8 py-7 pb-24" style="max-width:1200px;margin-right:auto">
     <section class="glass-bright rounded-2xl p-6 mb-5 relative overflow-hidden fade-up">
-      <div class="flex items-start justify-between gap-4 relative">
-        <div class="flex-1">
-          <p class="text-xs mb-0.5" style="color:#9e9aaa">오늘도 집필 중 ✍️</p>
-          <h1 class="text-2xl lg:text-3xl font-display font-extrabold text-white mb-4">안녕하세요, <span id="welcome-name">작가님</span>.</h1>
-          <div class="flex items-center gap-3 mb-6">
-            <div class="flex-1 max-w-xs">
-              <div class="flex justify-between text-xs mb-1">
-                <span style="color:#9e9aaa">오늘 목표</span>
-                <span class="font-semibold text-white"><span id="today-chars">0</span>/<span id="daily-goal">5,000</span>자</span>
-              </div>
-              <div class="progress-track">
-                <div class="progress-fill" id="today-progress" style="width:0%"></div>
-              </div>
-            </div>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <a href="chapters.html" class="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white glow-primary" style="background:#7c50ff">
-              <span class="mat-icon text-base">edit</span>이어서 집필
-            </a>
-            <a href="export.html" class="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all" style="border:1px solid rgba(184,162,255,0.12);color:#9e9aaa">
-              <span class="mat-icon text-base">upload_file</span>내보내기
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- WORKS GRID -->
-    <div class="mb-8">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-display font-bold text-white">내 작품 목록</h2>
-        <button onclick="openNewWorkModal()" class="text-xs px-3 py-1.5 rounded-xl transition-all" style="background:rgba(124,80,255,0.1);color:#b8a2ff;border:1px solid rgba(124,80,255,0.25)"> + 새 작품 </button>
-      </div>
+      <h1 class="text-2xl lg:text-3xl font-display font-extrabold text-white mb-4">안녕하세요, <span id="welcome-name">작가님</span>.</h1>
       <div id="works-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-    </div>
+    </section>
   </main>
 </div>
 
-<!-- ═══════ NEW WORK MODAL ═══════ -->
+<!-- ═══════ MODALS ═══════ -->
 <div id="new-work-modal" class="hidden modal-bg" onclick="if(event.target===this)this.classList.add('hidden')">
   <div class="glass-bright rounded-2xl p-6 w-full max-w-md" onclick="event.stopPropagation()">
     <h2 class="text-lg font-display font-bold text-white mb-5">새 작품 추가</h2>
     <div class="space-y-4">
-      <div>
-        <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">작품 제목 *</label>
-        <input id="nw-title" type="text" placeholder="예: 검의 신 2권" class="inp"/>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">장르</label>
-          <select id="nw-genre" class="inp">
-            <option>현대판타지</option><option>로맨스판타지</option><option>정통판타지</option>
-            <option>SF</option><option>무협</option><option>공포/스릴러</option><option>기타</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">상태</label>
-          <select id="nw-status" class="inp">
-            <option value="writing">집필 중</option>
-            <option value="plan">기획 단계</option>
-            <option value="hiatus">휴재</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">일일 목표 (자)</label>
-        <input id="nw-goal" type="number" placeholder="5000" class="inp" value="5000"/>
-      </div>
+      <input id="nw-title" type="text" placeholder="작품 제목" class="inp"/>
+      <select id="nw-genre" class="inp"><option>현대판타지</option><option>정통판타지</option></select>
     </div>
     <div class="flex gap-3 mt-5">
-      <button onclick="document.getElementById('new-work-modal').classList.add('hidden')" class="flex-1 py-3 rounded-xl text-sm" style="border:1px solid rgba(184,162,255,0.15);color:#9e9aaa">취소</button>
       <button onclick="createWork()" class="flex-1 py-3 rounded-xl text-sm font-semibold text-white" style="background:#7c50ff">생성</button>
     </div>
   </div>
 </div>
 
 <script>
-window.appData = {
-  works: [],
-  activeWorkId: localStorage.getItem('sv_activeWork') || null,
-  todayChars: parseInt(localStorage.getItem('sv_todayChars') || '0'),
-  dailyGoal: 5000,
-  user: null
-};
-
-function showAuth() { document.getElementById('auth-screen').classList.remove('hidden'); document.getElementById('onboarding-screen').classList.add('hidden'); document.getElementById('app-screen').classList.add('hidden'); }
+// Logic handlers
+function showAuth() { document.getElementById('auth-screen').classList.remove('hidden'); document.getElementById('app-screen').classList.add('hidden'); }
 function showApp(user) {
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('onboarding-screen').classList.add('hidden');
@@ -408,28 +324,17 @@ function showApp(user) {
   document.getElementById('welcome-name').textContent = name;
   document.getElementById('user-avatar').src = user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${name}&backgroundColor=7c50ff`;
 }
-function showOnboarding() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-screen').classList.add('hidden'); document.getElementById('onboarding-screen').classList.remove('hidden'); }
+function showOnboarding() { document.getElementById('onboarding-screen').classList.remove('hidden'); document.getElementById('app-screen').classList.add('hidden'); }
 
 window.goObStep = (n) => {
-  [1,2,3].forEach(i => {
-    document.getElementById(`ob-step-${i}`)?.classList.add('hidden');
-    document.getElementById(`sdot-${i}`).style.background = (i === n) ? '#b8a2ff' : '#5e5b68';
-  });
+  [1,2,3].forEach(i => document.getElementById(`ob-step-${i}`)?.classList.add('hidden'));
   document.getElementById(`ob-step-${n}`)?.classList.remove('hidden');
 };
 
 window.finishOnboarding = async () => {
   const title = document.getElementById('ob-title').value.trim();
-  if(!title) return document.getElementById('ob-title').focus();
-  const btn = document.getElementById('ob-finish-btn');
-  btn.disabled = true; btn.textContent = '생성 중...';
-  
-  const work = {
-    title, genre: document.getElementById('ob-genre').value,
-    status: document.getElementById('ob-status').value,
-    dailyGoal: parseInt(document.getElementById('ob-daily-goal').value) || 5000,
-    createdAt: new Date().toISOString()
-  };
+  if(!title) return;
+  const work = { title, genre: document.getElementById('ob-genre').value, status: document.getElementById('ob-status').value, createdAt: new Date().toISOString() };
   const id = await window.saveWork(work);
   if(id) {
     window.appData.activeWorkId = id;
@@ -437,7 +342,6 @@ window.finishOnboarding = async () => {
     localStorage.setItem('sv_workName', title);
     goObStep(3);
   }
-  btn.disabled = false; btn.textContent = '작품 만들기 →';
 };
 
 window.enterApp = () => showApp(window.appData.user);
@@ -450,31 +354,19 @@ function renderDashboard() {
     localStorage.setItem('sv_workName', active.title);
     document.getElementById('active-work-name').textContent = active.title;
     document.getElementById('sidebar-work-name').textContent = active.title;
-    document.getElementById('sidebar-work-status').textContent = active.genre;
-    document.getElementById('daily-goal').textContent = (active.dailyGoal || 5000).toLocaleString();
-    const pct = Math.min(100, Math.round(window.appData.todayChars / (active.dailyGoal || 5000) * 100));
-    document.getElementById('today-progress').style.width = pct + '%';
   }
   
   const list = document.getElementById('work-dropdown-list');
   list.innerHTML = window.appData.works.map(w => `
-    <div class="work-option ${w.id === window.appData.activeWorkId ? 'active' : ''}" onclick="switchWork('${w.id}')">
+    <div class="work-option" onclick="switchWork('${w.id}')">
       <div class="font-semibold text-sm text-white">${w.title}</div>
-      <div class="text-xs text-[#9e9aaa]">${w.genre}</div>
     </div>
   `).join('');
 
   const grid = document.getElementById('works-grid');
   grid.innerHTML = window.appData.works.map(w => `
-    <div class="glass-bright p-5 rounded-2xl card-glow cursor-pointer transition-all" onclick="switchWork('${w.id}')">
-      <div class="flex justify-between items-start mb-4">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-[#7c50ff] bg-opacity-20 text-[#b8a2ff]">
-          <span class="mat-icon">book</span>
-        </div>
-        <span class="badge ${w.status==='writing'?'badge-writing':'badge-plan'}">${w.status}</span>
-      </div>
-      <h3 class="font-bold text-white mb-1 truncate">${w.title}</h3>
-      <p class="text-xs text-[#9e9aaa] mb-4">${w.genre}</p>
+    <div class="glass-bright p-5 rounded-2xl cursor-pointer" onclick="switchWork('${w.id}')">
+      <h3 class="font-bold text-white truncate">${w.title}</h3>
     </div>
   `).join('');
 }
@@ -491,18 +383,9 @@ window.openNewWorkModal = () => document.getElementById('new-work-modal').classL
 
 window.createWork = async () => {
   const title = document.getElementById('nw-title').value.trim();
-  if(!title) return;
-  const work = {
-    title, genre: document.getElementById('nw-genre').value,
-    status: document.getElementById('nw-status').value,
-    dailyGoal: parseInt(document.getElementById('nw-goal').value) || 5000,
-    createdAt: new Date().toISOString()
-  };
-  const id = await window.saveWork(work);
-  if(id) {
-    document.getElementById('new-work-modal').classList.add('hidden');
-    document.getElementById('nw-title').value = '';
-  }
+  const work = { title, genre: document.getElementById('nw-genre').value, createdAt: new Date().toISOString() };
+  await window.saveWork(work);
+  document.getElementById('new-work-modal').classList.add('hidden');
 };
 </script>
 </body>
