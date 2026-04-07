@@ -1,291 +1,509 @@
 <!DOCTYPE html>
-<html class="dark" lang="ko">
+<html lang="ko" class="dark">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>StoryVital – 웹소설 작가의 워크스페이스</title>
-    <meta name="description" content="웹소설 캐릭터 DB, 타임라인, 인물 관계도를 한 곳에서 관리하는 작가 전용 SaaS."/>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StoryVital — 작가를 위한 스마트 설정 관리</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&family=Noto+Serif+KR:wght@300;400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, collection, addDoc, getDocs, doc, query, where, onSnapshot, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  // --- Auth & Initial Load ---
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      window.appData.user = user;
+      const projectsRef = collection(db, 'projects');
+      const q = query(projectsRef, where('userId', '==', user.uid));
+      
+      onSnapshot(q, (snapshot) => {
+        const projects = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        window.appData.works = projects;
+        
+        if (projects.length === 0) {
+          showOnboarding();
+        } else {
+          // If no active work, pick first
+          if (!window.appData.activeWorkId || !projects.find(p => p.id === window.appData.activeWorkId)) {
+            window.appData.activeWorkId = projects[0].id;
+            localStorage.setItem('sv_activeWork', projects[0].id);
+          }
+          showApp(user);
+          renderDashboard();
+        }
+      });
+    } else {
+      showAuth();
+    }
+  });
+
+  window.loginGoogle = async () => {
+    try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e) { console.error(e); }
+  };
+
+  window.signOutUser = () => signOut(auth);
+
+  window.saveWork = async (work) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return null;
+    try {
+      const docRef = await addDoc(collection(db, 'projects'), { ...work, userId: uid });
+      return docRef.id;
+    } catch(e) { console.error(e); return null; }
+  };
+</script>
+
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          surface: '#09090d',
+          'surface-low': '#0e0e13',
+          'surface-mid': '#141419',
+          'surface-high': '#1a1a21',
+          'surface-bright': '#22222b',
+          primary: '#b8a2ff',
+          'primary-dim': '#7c50ff',
+          secondary: '#c490ff',
+          'secondary-dim': '#9d60f0',
+          tertiary: '#ff9bbf',
+          'tertiary-dim': '#e8587a',
+          success: '#40d0a8',
+          outline: '#5e5b68',
+          'on-surface': '#eae6f4',
+          'on-surface-variant': '#9e9aaa'
+        },
+        fontFamily: { display: ['Manrope', 'sans-serif'] }
+      }
+    }
+  };
+</script>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.mat-icon { font-family: 'Material Symbols Outlined'; font-style: normal; user-select: none; line-height: 1; vertical-align: middle; }
+body { background: #09090d; color: #eae6f4; font-family: 'Manrope', sans-serif; overflow-x: hidden; }
+.glass { background: rgba(20,20,25,0.7); backdrop-filter: blur(20px); border: 1px solid rgba(184,162,255,0.09); }
+.glass-bright { background: rgba(26,26,33,0.85); backdrop-filter: blur(24px); border: 1px solid rgba(184,162,255,0.12); }
+.card-glow:hover { box-shadow: 0 12px 32px rgba(124,80,255,0.15); border-color: rgba(124,80,255,0.3); }
+.glow-primary { box-shadow: 0 0 20px rgba(124,80,255,0.4); }
+.nav-link { color: #9e9aaa; transition: color 0.15s; cursor: pointer; }
+.nav-link:hover { color: #eae6f4; }
+.nav-active { color: #b8a2ff !important; }
+.sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #9e9aaa; font-size: 14px; transition: all 0.15s; cursor: pointer; text-decoration: none; }
+.sidebar-item:hover { background: rgba(255,255,255,0.04); color: #eae6f4; }
+.sidebar-active { background: rgba(124,80,255,0.15); color: #b8a2ff; border-left: 2px solid #7c50ff; padding-left: 10px; }
+.inp { background: rgba(0,0,0,0.6); border: 1px solid rgba(184,162,255,0.1); border-radius: 10px; padding: 10px 14px; color: #eae6f4; font-size: 14px; width: 100%; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+.inp:focus { border-color: #7c50ff; box-shadow: 0 0 0 3px rgba(124,80,255,0.15); }
+.badge { padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.badge-writing { background: rgba(64,208,168,0.15); color: #40d0a8; }
+.badge-plan { background: rgba(184,162,255,0.15); color: #b8a2ff; }
+.badge-done { background: rgba(232,88,122,0.15); color: #e8587a; }
+.progress-track { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; background: #7c50ff; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+.modal-bg { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; }
+.work-switcher { position: relative; }
+.work-dropdown { position: absolute; top: 110%; right: 0; width: 220px; background: #1a1a21; border: 1px solid rgba(184,162,255,0.15); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 150; visibility: hidden; opacity: 0; transform: translateY(-10px); transition: all 0.2s; }
+.work-dropdown.open { visibility: visible; opacity: 1; transform: translateY(0); }
+.work-option { padding: 10px 14px; cursor: pointer; transition: background 0.15s; border-radius: 8px; margin: 4px; }
+.work-option:hover { background: rgba(255,255,255,0.04); }
+.work-option.active { background: rgba(124,80,255,0.1); }
+.streak-cell { width: 12px; height: 12px; border-radius: 2px; background: rgba(255,255,255,0.05); }
+.streak-cell.active { background: #7c50ff; box-shadow: 0 0 8px rgba(124,80,255,0.5); }
+.streak-cell.partial { background: rgba(124,80,255,0.3); }
+.streak-cell.today { border: 1px solid #b8a2ff; }
+.thread-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px; border-radius: 12px; transition: background 0.15s; }
+.thread-item:hover { background: rgba(255,255,255,0.04); }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.fade-up { animation: fadeUp 0.5s ease forwards; }
+.d1 { animation-delay: 0.1s; opacity: 0; }
+.d2 { animation-delay: 0.2s; opacity: 0; }
+.d3 { animation-delay: 0.3s; opacity: 0; }
+.d4 { animation-delay: 0.4s; opacity: 0; }
+
+@media (min-width: 1024px) { .sidebar-desktop { display: flex; } .ml-sidebar { margin-left: 224px; } }
+@media (max-width: 1023px) { .sidebar-desktop { display: none; } .ml-sidebar { margin-left: 0; } }
+</style>
 </head>
-<body class="bg-surface font-body text-on-surface antialiased overflow-hidden h-screen">
 
-<!-- ===================== HEADER ===================== -->
-<header class="fixed top-0 right-0 left-0 h-16 bg-surface/80 backdrop-blur-xl flex items-center justify-between px-6 w-full z-40 font-headline antialiased border-b border-surface-bright/10">
-    <div class="flex items-center gap-8">
-        <div class="flex items-center gap-2">
-            <span class="text-primary material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1">auto_stories</span>
-            <span class="text-xl font-bold tracking-tight text-white">StoryVital</span>
-        </div>
-        <nav class="hidden md:flex gap-6 items-center">
-            <span class="text-gray-400 hover:text-white transition-colors cursor-pointer text-sm">Dashboard</span>
-            <span class="text-primary font-bold cursor-pointer text-sm underline underline-offset-8 decoration-2">Characters</span>
-            <span class="text-gray-400 hover:text-white transition-colors cursor-pointer text-sm">Library</span>
-        </nav>
+<body>
+
+<!-- ═══════ AUTH SCREEN ═══════ -->
+<div id="auth-screen" class="min-h-screen flex items-center justify-center p-6 hidden">
+  <div class="glass-bright p-10 rounded-3xl w-full max-w-md text-center fade-up">
+    <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style="background: linear-gradient(135deg, #7c50ff, #b8a2ff)">
+      <span class="mat-icon text-white" style="font-size:32px">auto_stories</span>
     </div>
-    <div class="flex items-center gap-4">
-        <!-- Pomodoro Timer -->
-        <div id="pomodoro-timer" class="flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-full text-xs text-on-surface-variant cursor-pointer hover:bg-surface-bright transition-all group select-none relative">
-            <span class="material-symbols-outlined text-[16px] group-hover:text-primary transition-colors">timer</span>
-            <span id="timer-display">25:00</span>
-            <span id="timer-label" class="opacity-60 group-hover:opacity-100 transition-opacity">Start Sprint</span>
-            <button id="timer-reset" class="ml-1 p-0.5 hover:bg-primary/20 rounded-full transition-colors flex items-center justify-center">
-                <span class="material-symbols-outlined text-sm text-on-surface-variant hover:text-primary">replay</span>
-            </button>
-        </div>
-        <span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-white transition-colors">notifications</span>
-        <div id="auth-container">
-            <button id="login-btn" type="button" class="bg-primary-dim text-white font-bold py-1.5 px-4 rounded-lg text-sm transition-colors cursor-pointer hover:bg-primary active:scale-95">
-                구글로 시작하기
-            </button>
-        </div>
+    <h1 class="text-3xl font-display font-extrabold text-white mb-2">StoryVital</h1>
+    <p class="text-sm mb-8" style="color: #9e9aaa">작가를 위한 가장 우아한 설정 관리 도구</p>
+    <button onclick="loginGoogle()" class="w-full flex items-center justify-center gap-3 bg-white text-black py-3.5 rounded-xl font-bold transition-transform active:scale-95 mb-4">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/layout/google.svg" width="18" alt=""/>
+      Google로 시작하기
+    </button>
+    <p class="text-xs" style="color: #5e5b68">로그인 시 이용약관 및 개인정보 처리방침에 동의하게 됩니다.</p>
+  </div>
+</div>
+
+<!-- ═══════ ONBOARDING ═══════ -->
+<div id="onboarding-screen" class="min-h-screen flex items-center justify-center p-6 bg-[#09090d] hidden">
+  <div class="w-full max-w-md">
+    <!-- Step dots -->
+    <div class="flex justify-center gap-2 mb-8">
+      <div id="sdot-1" class="w-2 h-2 rounded-full active" style="background:#5e5b68"></div>
+      <div id="sdot-2" class="w-2 h-2 rounded-full" style="background:#5e5b68"></div>
+      <div id="sdot-3" class="w-2 h-2 rounded-full" style="background:#5e5b68"></div>
     </div>
-</header>
 
-<!-- ===================== SIDEBAR ===================== -->
-<aside class="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-low flex flex-col py-8 z-30 shadow-[20px_0_50px_rgba(0,0,0,0.5)] font-headline text-sm tracking-wide">
-    <div class="px-6 mb-8">
-        <h2 class="text-white font-black text-lg">Manuscript Alpha</h2>
-        <p class="text-gray-500 text-xs">Drafting Phase</p>
-    </div>
-    <div class="flex flex-col gap-1">
-        <a class="flex items-center gap-4 px-6 py-3 text-gray-400 hover:text-white hover:bg-surface-container-high transition-all hover:translate-x-1 duration-200 rounded-r-full mr-4" href="#">
-            <span class="material-symbols-outlined">auto_stories</span><span>Chapters</span>
-        </a>
-        <a class="flex items-center gap-4 px-6 py-3 bg-surface-container-highest text-white border-l-4 border-secondary hover:translate-x-1 transition-all duration-200 rounded-r-full mr-4" href="#">
-            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">group</span><span>Characters</span>
-        </a>
-        <a class="flex items-center gap-4 px-6 py-3 text-gray-400 hover:text-white hover:bg-surface-container-high transition-all hover:translate-x-1 duration-200 rounded-r-full mr-4" href="/archive.html">
-            <span class="material-symbols-outlined">archive</span><span>Archive</span>
-        </a>
-    </div>
-    <div class="mt-auto flex flex-col gap-1">
-        <a class="flex items-center gap-4 px-6 py-3 text-gray-500 hover:text-white transition-colors" href="#">
-            <span class="material-symbols-outlined">settings</span><span>Settings</span>
-        </a>
-        <a class="flex items-center gap-4 px-6 py-3 text-gray-500 hover:text-white transition-colors" href="#">
-            <span class="material-symbols-outlined">help</span><span>Help</span>
-        </a>
-    </div>
-</aside>
-
-<!-- ===================== MAIN LAYOUT ===================== -->
-<main class="ml-64 mt-16 p-8 h-[calc(100vh-64px)] flex flex-row gap-8 overflow-hidden font-inter">
-
-    <!-- ===== LEFT: Timeline ===== -->
-    <section class="w-72 flex-shrink-0 h-full flex flex-col gap-4">
-        <div class="flex items-center justify-between shrink-0">
-            <h3 class="font-headline font-bold text-white tracking-tight">Timeline</h3>
-            <span id="timeline-filter-badge" class="hidden text-[10px] uppercase tracking-widest text-secondary bg-secondary/10 px-2 py-1 rounded-full font-bold">Filtered</span>
-            <span class="text-[10px] uppercase tracking-widest text-primary bg-primary/10 px-2 py-1 rounded-full font-bold">Chapter 14</span>
+    <!-- Step 1: Welcome -->
+    <div id="ob-step-1" class="glass-bright rounded-2xl p-8 text-center fade-in">
+      <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5" style="background: linear-gradient(135deg, #7c50ff, #b8a2ff)">
+        <span class="mat-icon text-white" style="font-size:28px">auto_stories</span>
+      </div>
+      <h2 class="text-2xl font-display font-extrabold text-white mb-3">환영합니다, 작가님!</h2>
+      <p class="text-sm leading-relaxed mb-6" style="color:#9e9aaa"> StoryVital은 웹소설 연재 작가를 위한 설정 관리 도구입니다.<br/>처음 방문이시군요. 빠르게 시작할 수 있도록 안내해드릴게요. </p>
+      <div class="space-y-3 text-left mb-6">
+        <div class="flex items-center gap-3 p-3 rounded-xl" style="background: rgba(124,80,255,0.08); border: 1px solid rgba(124,80,255,0.15)">
+          <span class="mat-icon text-2xl" style="color:#b8a2ff">group</span>
+          <div><p class="text-sm font-semibold text-white">캐릭터 DB</p><p class="text-xs" style="color:#9e9aaa">외모·성격·능력·관계 한 번에 관리</p></div>
         </div>
-
-        <!-- Filter reset hint -->
-        <div id="filter-hint" class="hidden shrink-0">
-            <button id="clear-filter-btn" class="w-full py-2 bg-secondary/10 text-secondary text-[10px] font-bold rounded-lg border border-secondary/20 hover:bg-secondary/20 transition-all flex items-center justify-center gap-1">
-                <span class="material-symbols-outlined text-sm">filter_alt_off</span> 맵 필터 해제
-            </button>
+        <div class="flex items-center gap-3 p-3 rounded-xl" style="background: rgba(232,88,122,0.07); border: 1px solid rgba(232,88,122,0.15)">
+          <span class="mat-icon text-2xl" style="color:#ff9bbf">commit</span>
+          <div><p class="text-sm font-semibold text-white">복선 트래커</p><p class="text-xs" style="color:#9e9aaa">투척한 복선을 절대 잊지 않도록</p></div>
         </div>
-
-        <div class="flex-1 overflow-y-auto pr-2 space-y-6 relative scrollbar-hide" id="timeline-container">
-            <div class="absolute left-[7px] top-0 bottom-0 w-0.5 timeline-line opacity-20"></div>
-            <!-- Dynamic Timeline Events -->
+        <div class="flex items-center gap-3 p-3 rounded-xl" style="background: rgba(64,208,168,0.07); border: 1px solid rgba(64,208,168,0.15)">
+          <span class="mat-icon text-2xl" style="color:#40d0a8">upload_file</span>
+          <div><p class="text-sm font-semibold text-white">플랫폼 내보내기</p><p class="text-xs" style="color:#9e9aaa">문피아·네이버·카카오 맞춤 변환</p></div>
         </div>
+      </div>
+      <button onclick="goObStep(2)" class="w-full py-3 rounded-xl font-semibold text-white text-sm glow-primary" style="background: #7c50ff"> 시작하기 → </button>
+    </div>
 
-        <button id="add-timeline-event-btn" class="shrink-0 w-full py-3 bg-surface-container-high hover:bg-surface-bright text-xs font-bold text-on-surface-variant rounded-xl border border-outline-variant/10 transition-all flex items-center justify-center gap-2">
-            <span class="material-symbols-outlined text-sm">add_circle</span> Add Scene
+    <!-- Step 2: Create first work -->
+    <div id="ob-step-2" class="hidden glass-bright rounded-2xl p-8 fade-in">
+      <h2 class="text-xl font-display font-extrabold text-white mb-1">첫 작품을 만들어볼까요?</h2>
+      <p class="text-sm mb-6" style="color:#9e9aaa">나중에 언제든 수정하거나 추가할 수 있어요.</p>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">작품 제목 *</label>
+          <input id="ob-title" type="text" placeholder="예: 마법사의 귀환 2부" class="inp"/>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">장르</label>
+            <select id="ob-genre" class="inp">
+              <option value="현대판타지">현대 판타지</option>
+              <option value="로맨스판타지">로맨스 판타지</option>
+              <option value="판타지">정통 판타지</option>
+              <option value="SF">SF</option>
+              <option value="무협">무협</option>
+              <option value="공포">공포/스릴러</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">현재 상태</label>
+            <select id="ob-status" class="inp">
+              <option value="writing">집필 중</option>
+              <option value="plan">기획 단계</option>
+              <option value="hiatus">휴재 중</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">일일 목표 (자)</label>
+          <input id="ob-daily-goal" type="number" placeholder="5000" class="inp" value="5000"/>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="goObStep(1)" class="flex-1 py-3 rounded-xl text-sm" style="border:1px solid rgba(184,162,255,0.15);color:#9e9aaa">이전</button>
+        <button onclick="finishOnboarding()" id="ob-finish-btn" class="flex-1 py-3 rounded-xl font-semibold text-white text-sm" style="background:#7c50ff">작품 만들기 →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Done -->
+    <div id="ob-step-3" class="hidden glass-bright rounded-2xl p-8 text-center fade-in">
+      <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style="background: rgba(64,208,168,0.15); border: 2px solid #40d0a8">
+        <span class="mat-icon" style="font-size:28px;color:#40d0a8">check</span>
+      </div>
+      <h2 class="text-xl font-display font-extrabold text-white mb-2">준비 완료!</h2>
+      <p class="text-sm mb-6" style="color:#9e9aaa">작품이 생성됐어요. 이제 캐릭터를 추가하거나 챕터를 기록해보세요.</p>
+      <button onclick="enterApp()" class="w-full py-3 rounded-xl font-semibold text-white text-sm glow-primary" style="background:#7c50ff"> 대시보드로 → </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ MAIN APP ═══════ -->
+<div id="app-screen" class="hidden">
+
+  <!-- TOP NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-[100] h-16 glass-bright flex items-center justify-between px-4 lg:px-6">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#7c50ff,#b8a2ff)">
+          <span class="mat-icon text-white" style="font-size:14px">auto_stories</span>
+        </div>
+        <span class="font-display font-extrabold text-white text-base hidden sm:block">StoryVital</span>
+      </a>
+      <div class="hidden lg:flex items-center gap-5 ml-4" style="font-size:14px">
+        <a href="index.html" class="nav-active font-semibold">대시보드</a>
+        <a href="characters.html" class="nav-link">캐릭터</a>
+        <a href="chapters.html" class="nav-link">챕터 트래커</a>
+        <a href="export.html" class="nav-link">내보내기</a>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <!-- Work switcher -->
+      <div class="work-switcher" id="work-switcher">
+        <button onclick="toggleWorkDropdown()" class="flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all" style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,162,255,0.12)">
+          <span class="mat-icon text-sm" style="color:#b8a2ff;font-size:16px">book</span>
+          <span id="active-work-name" class="font-semibold text-white max-w-[120px] truncate hidden sm:block">작품 로딩중...</span>
+          <span class="mat-icon text-sm" style="color:#9e9aaa;font-size:16px" id="switcher-arrow">expand_more</span>
         </button>
-    </section>
-
-    <!-- ===== CENTER: Character Forge ===== -->
-    <section class="flex-1 min-w-0 h-full overflow-y-auto pr-2 custom-scroll">
-        <div class="glass-panel p-8 rounded-2xl ambient-shadow space-y-6" id="form-wrapper">
-
-            <!-- Form Header: Mode indicator + New Character btn -->
-            <div class="flex items-start justify-between gap-4">
-                <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-2">
-                        <h1 class="text-4xl font-headline font-black text-white tracking-tighter">Character Forge</h1>
-                        <!-- Mode Badge -->
-                        <span id="mode-badge" class="text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-widest bg-primary/15 text-primary border border-primary/20 transition-all">
-                            Create
-                        </span>
-                    </div>
-                    <p class="text-sm text-on-surface-variant leading-relaxed">인물의 본질을 잉크와 영혼으로 빚어내는 공간.</p>
-                </div>
-                <!-- New Character Button -->
-                <button type="button" id="new-char-btn" class="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 bg-surface-container-high hover:bg-surface-bright border border-outline-variant/20 hover:border-primary/30 text-on-surface-variant hover:text-white text-xs font-bold rounded-xl transition-all active:scale-95 group">
-                    <span class="material-symbols-outlined text-sm group-hover:text-primary transition-colors">person_add</span>
-                    New Character
-                </button>
-            </div>
-
-            <!-- Avatar -->
-            <div class="flex items-center gap-6">
-                <div class="group relative flex-shrink-0">
-                    <div class="w-20 h-20 rounded-full bg-black flex items-center justify-center overflow-hidden border-2 border-surface-bright shadow-2xl relative">
-                        <img id="avatar-preview" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200" alt="Character Avatar" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">
-                        <div class="absolute inset-0 bg-primary-dim/20 mix-blend-overlay"></div>
-                    </div>
-                    <button type="button" aria-label="Change Avatar" class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary-dim text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform">
-                        <span class="material-symbols-outlined text-xs">shuffle</span>
-                    </button>
-                </div>
-                <div class="flex-1 text-xs text-on-surface-variant/60 italic leading-relaxed">
-                    저장 시 자동으로 아바타가 배정됩니다. 셔플로 미리보기할 수 있습니다.
-                </div>
-            </div>
-
-            <form class="space-y-6" id="character-form">
-
-                <!-- ① Protagonist Toggle — TOPMOST -->
-                <div class="flex items-center justify-between p-4 bg-primary-dim/5 rounded-xl border border-primary/10">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1">stars</span>
-                        <div>
-                            <p class="text-xs font-bold text-white tracking-wide">주인공으로 설정</p>
-                            <p class="text-[10px] text-on-surface-variant">관계도 중앙에 크게 배치됩니다</p>
-                        </div>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="char-is-protagonist" class="sr-only peer">
-                        <div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary shadow-[0_0_10px_rgba(126,81,255,0)] peer-checked:shadow-[0_0_15px_rgba(126,81,255,0.4)]"></div>
-                    </label>
-                </div>
-
-                <!-- ② Basic Info Grid -->
-                <div class="grid grid-cols-2 gap-6">
-                    <div class="space-y-2">
-                        <label for="char-fullname" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Full Name</label>
-                        <input id="char-fullname" class="w-full h-12 recessed-input px-4 text-white font-medium" type="text" placeholder="예) 이건우, Kaelen Vos"/>
-                    </div>
-                    <div class="space-y-2">
-                        <!-- ③ Archetype: select → free text input -->
-                        <label for="char-archetype" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Archetype</label>
-                        <input id="char-archetype" class="w-full h-12 recessed-input px-4 text-white font-medium" type="text" placeholder="예) 냉혹한 빌런, 반전 있는 조력자…"/>
-                    </div>
-                </div>
-
-                <!-- ④ Key Traits -->
-                <div class="space-y-2">
-                    <label for="char-trait-input" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Key Traits &amp; Talents</label>
-                    <div id="char-traits-container" class="flex flex-wrap gap-2 mb-2 min-h-[28px]"></div>
-                    <input id="char-trait-input" class="w-full h-12 recessed-input px-4 text-white text-sm" placeholder="특성 입력 후 Enter..." type="text"/>
-                </div>
-
-                <!-- ⑤ Inner World -->
-                <div class="space-y-2">
-                    <label for="char-personality" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Inner World (Personality)</label>
-                    <textarea id="char-personality" class="w-full recessed-input p-4 text-white text-sm leading-relaxed min-h-[100px]" placeholder="내면 세계를 자유롭게 묘사하세요..."></textarea>
-                </div>
-
-                <!-- ⑥ Related Characters (통합: 관련 인물 + 주인공과의 관계) -->
-                <div class="space-y-3 pt-4 border-t border-surface-bright/20">
-                    <div class="flex items-center justify-between">
-                        <label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Related Characters</label>
-                        <button type="button" id="add-relationship-btn" class="text-[10px] bg-surface-container-high hover:bg-surface-bright text-primary px-3 py-1.5 rounded-lg border border-primary/20 transition-colors flex items-center gap-1.5">
-                            <span class="material-symbols-outlined text-[14px]">add</span> Add Row
-                        </button>
-                    </div>
-                    <div id="relationships-container" class="space-y-3">
-                        <!-- Rows: [Character Select] | [Relation to Protagonist] | [Delete] -->
-                    </div>
-                    <p id="rel-empty-hint" class="text-[10px] italic text-on-surface-variant/40 text-center py-2">+ 버튼으로 관련 인물을 추가하세요</p>
-                </div>
-
-                <!-- ⑦ Relationship to Protagonist (주인공 설정 시 숨김) -->
-                <div id="rel-to-protagonist-container" class="space-y-2">
-                    <label for="char-rel-to-proto" class="text-[10px] font-bold text-secondary uppercase tracking-widest ml-1">주인공과의 관계</label>
-                    <input id="char-rel-to-proto" type="text" class="w-full h-12 recessed-input px-4 text-white text-sm border-l-4 border-secondary/40" placeholder="예) 숨겨진 동맹 / 앙숙 / 라이벌…"/>
-                </div>
-
-                <!-- ⑧ Action Buttons -->
-                <div class="pt-4 flex flex-wrap gap-3">
-                    <!-- Save Button with Spinner/Saved state -->
-                    <button type="submit" id="save-char-btn" disabled
-                        class="flex-1 h-14 bg-primary-dim text-white font-black rounded-xl ambient-shadow hover:bg-primary transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed text-base tracking-tight flex items-center justify-center gap-2">
-                        <span id="save-btn-icon" class="material-symbols-outlined text-sm hidden">check</span>
-                        <svg id="save-btn-spinner" class="hidden animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                        </svg>
-                        <span id="save-btn-text">인증 확인 중...</span>
-                    </button>
-                    <button type="button" id="delete-char-btn" class="hidden px-5 h-14 bg-error-dim/20 text-error hover:bg-error-dim/30 font-bold rounded-xl border border-error/20 transition-all flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">delete</span>
-                    </button>
-                    <button type="button" id="archive-char-btn" class="px-6 h-14 bg-surface-container-high text-on-surface font-bold rounded-xl hover:bg-surface-bright transition-all flex items-center gap-2 text-sm">
-                        <span class="material-symbols-outlined text-sm">archive</span> Archive
-                    </button>
-                </div>
-            </form>
+        <div id="work-dropdown" class="work-dropdown">
+          <div id="work-dropdown-list" class="py-1"></div>
+          <div style="border-top:1px solid rgba(184,162,255,0.1)" class="p-2">
+            <button onclick="openNewWorkModal()" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all" style="color:#9e9aaa">
+              <span class="mat-icon text-base">add</span>새 작품 추가
+            </button>
+          </div>
         </div>
-    </section>
-
-    <!-- ===== Timeline Event Modal ===== -->
-    <div id="timeline-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden">
-        <div class="glass-panel w-[420px] p-6 rounded-2xl shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
-            <h3 class="text-lg font-headline font-bold text-white mb-4" id="modal-title">New Scene</h3>
-            <div class="space-y-4">
-                <div class="space-y-2">
-                    <label for="event-title" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Title</label>
-                    <input id="event-title" type="text" class="w-full h-10 recessed-input px-4 text-white text-sm" placeholder="장면 제목..."/>
-                </div>
-                <div class="space-y-2">
-                    <label for="event-summary" class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Summary (Max 200자)</label>
-                    <textarea id="event-summary" class="w-full recessed-input p-4 text-white text-xs leading-relaxed min-h-[90px]" maxlength="200" placeholder="사건을 간략히 서술하세요..."></textarea>
-                </div>
-                <div class="space-y-2">
-                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest ml-1">Participants</span>
-                    <div id="event-participants-list" class="flex flex-wrap gap-2 max-h-[100px] overflow-y-auto pr-2 custom-scroll">
-                        <p class="text-[10px] italic text-on-surface-variant/40">캐릭터 로딩 중...</p>
-                    </div>
-                </div>
-                <div class="flex gap-3 pt-2">
-                    <button id="save-event-btn" type="button" class="flex-1 h-10 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-dim transition-all">Save Event</button>
-                    <button id="close-event-modal" type="button" class="px-4 h-10 bg-surface-container-highest text-on-surface-variant text-xs font-bold rounded-lg hover:bg-surface-bright transition-all">Cancel</button>
-                </div>
-            </div>
-        </div>
+      </div>
+      <img id="user-avatar" src="" alt="" class="w-8 h-8 rounded-full object-cover cursor-pointer" style="border:1px solid rgba(124,80,255,0.4)" onclick="signOutUser()"/>
     </div>
+  </nav>
 
-    <!-- Pomodoro Pulse Overlay -->
-    <div id="pomodoro-pulse" class="fixed inset-0 pointer-events-none z-[100] hidden neon-pulse opacity-50"></div>
+  <!-- SIDEBAR (DESKTOP) -->
+  <aside class="sidebar-desktop fixed left-0 top-16 bottom-0 w-56 flex-col py-5 z-50" style="background:#0e0e13;border-right:1px solid rgba(184,162,255,0.06)">
+    <div class="px-4 mb-4">
+      <p class="text-xs uppercase tracking-widest mb-1" style="color:#5e5b68">현재 작품</p>
+      <p class="font-display font-bold text-white text-sm leading-snug" id="sidebar-work-name">-</p>
+      <p class="text-xs mt-0.5" style="color:#9e9aaa" id="sidebar-work-status">-</p>
+    </div>
+    <nav class="flex-1 px-2 space-y-0.5">
+      <a href="index.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
+      <a href="characters.html" class="sidebar-item"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
+      <a href="chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
+      <a href="export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
+    </nav>
+    <div class="px-2">
+      <button onclick="signOutUser()" class="sidebar-item w-full"><span class="mat-icon text-lg">logout</span>로그아웃</button>
+    </div>
+  </aside>
 
-    <!-- ===== RIGHT: Map + Character List ===== -->
-    <section class="w-[420px] flex-shrink-0 h-full flex flex-col gap-6">
-        <div class="flex items-center justify-between">
-            <h3 class="font-headline font-bold text-white tracking-tight">Relationship Map</h3>
-            <div class="flex items-center gap-3">
-                <span id="map-filter-label" class="hidden text-[10px] text-secondary font-bold uppercase tracking-widest">필터 적용 중</span>
-                <span class="material-symbols-outlined text-primary cursor-pointer hover:rotate-180 transition-transform duration-700">hub</span>
+  <!-- MAIN CONTENT -->
+  <main class="ml-sidebar pt-16 min-h-screen px-4 lg:px-8 py-7 pb-24" style="max-width:1200px;margin-right:auto">
+    <section class="glass-bright rounded-2xl p-6 mb-5 relative overflow-hidden fade-up">
+      <div class="flex items-start justify-between gap-4 relative">
+        <div class="flex-1">
+          <p class="text-xs mb-0.5" style="color:#9e9aaa">오늘도 집필 중 ✍️</p>
+          <h1 class="text-2xl lg:text-3xl font-display font-extrabold text-white mb-4">안녕하세요, <span id="welcome-name">작가님</span>.</h1>
+          <div class="flex items-center gap-3 mb-6">
+            <div class="flex-1 max-w-xs">
+              <div class="flex justify-between text-xs mb-1">
+                <span style="color:#9e9aaa">오늘 목표</span>
+                <span class="font-semibold text-white"><span id="today-chars">0</span>/<span id="daily-goal">5,000</span>자</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="today-progress" style="width:0%"></div>
+              </div>
             </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <a href="chapters.html" class="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white glow-primary" style="background:#7c50ff">
+              <span class="mat-icon text-base">edit</span>이어서 집필
+            </a>
+            <a href="export.html" class="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all" style="border:1px solid rgba(184,162,255,0.12);color:#9e9aaa">
+              <span class="mat-icon text-base">upload_file</span>내보내기
+            </a>
+          </div>
         </div>
-
-        <!-- Map Rendering Area -->
-        <div id="relationship-map" class="flex-1 bg-surface-container-low rounded-2xl relative overflow-hidden group min-h-0">
-            <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#7e51ff 1px, transparent 1px); background-size: 24px 24px;"></div>
-            <!-- JS injects SVG + nodes here -->
-            <p id="map-empty-hint" class="absolute inset-0 flex items-center justify-center text-[10px] text-on-surface-variant/40 italic text-center p-8">
-                등록된 캐릭터가 없습니다
-            </p>
-        </div>
-
-        <!-- Character List -->
-        <div class="bg-surface-container-high rounded-3xl p-5 ambient-shadow max-h-[38%] flex flex-col">
-            <div class="flex items-center justify-between mb-4">
-                <h4 class="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant">Registered Characters</h4>
-                <div id="character-count-badge" class="bg-primary/20 text-primary-fixed text-[10px] font-black px-2 py-1 rounded-full border border-primary/20">0</div>
-            </div>
-            <div id="character-list-container" class="flex-1 overflow-y-auto space-y-3 pr-1 custom-scroll">
-                <p class="text-xs text-on-surface-variant/40 italic py-4 text-center">원고가 아직 비어있습니다...</p>
-            </div>
-        </div>
+      </div>
     </section>
 
-</main>
+    <!-- WORKS GRID -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-display font-bold text-white">내 작품 목록</h2>
+        <button onclick="openNewWorkModal()" class="text-xs px-3 py-1.5 rounded-xl transition-all" style="background:rgba(124,80,255,0.1);color:#b8a2ff;border:1px solid rgba(124,80,255,0.25)"> + 새 작품 </button>
+      </div>
+      <div id="works-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+  </main>
+</div>
 
-<script type="module" src="/src/main.js"></script>
+<!-- ═══════ NEW WORK MODAL ═══════ -->
+<div id="new-work-modal" class="hidden modal-bg" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="glass-bright rounded-2xl p-6 w-full max-w-md" onclick="event.stopPropagation()">
+    <h2 class="text-lg font-display font-bold text-white mb-5">새 작품 추가</h2>
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">작품 제목 *</label>
+        <input id="nw-title" type="text" placeholder="예: 검의 신 2권" class="inp"/>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">장르</label>
+          <select id="nw-genre" class="inp">
+            <option>현대판타지</option><option>로맨스판타지</option><option>정통판타지</option>
+            <option>SF</option><option>무협</option><option>공포/스릴러</option><option>기타</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">상태</label>
+          <select id="nw-status" class="inp">
+            <option value="writing">집필 중</option>
+            <option value="plan">기획 단계</option>
+            <option value="hiatus">휴재</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs uppercase tracking-wider block mb-2" style="color:#5e5b68">일일 목표 (자)</label>
+        <input id="nw-goal" type="number" placeholder="5000" class="inp" value="5000"/>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="document.getElementById('new-work-modal').classList.add('hidden')" class="flex-1 py-3 rounded-xl text-sm" style="border:1px solid rgba(184,162,255,0.15);color:#9e9aaa">취소</button>
+      <button onclick="createWork()" class="flex-1 py-3 rounded-xl text-sm font-semibold text-white" style="background:#7c50ff">생성</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.appData = {
+  works: [],
+  activeWorkId: localStorage.getItem('sv_activeWork') || null,
+  todayChars: parseInt(localStorage.getItem('sv_todayChars') || '0'),
+  dailyGoal: 5000,
+  user: null
+};
+
+function showAuth() { document.getElementById('auth-screen').classList.remove('hidden'); document.getElementById('onboarding-screen').classList.add('hidden'); document.getElementById('app-screen').classList.add('hidden'); }
+function showApp(user) {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('onboarding-screen').classList.add('hidden');
+  document.getElementById('app-screen').classList.remove('hidden');
+  const name = user.displayName?.split(' ')[0] || '작가님';
+  document.getElementById('welcome-name').textContent = name;
+  document.getElementById('user-avatar').src = user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${name}&backgroundColor=7c50ff`;
+}
+function showOnboarding() { document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-screen').classList.add('hidden'); document.getElementById('onboarding-screen').classList.remove('hidden'); }
+
+window.goObStep = (n) => {
+  [1,2,3].forEach(i => {
+    document.getElementById(`ob-step-${i}`)?.classList.add('hidden');
+    document.getElementById(`sdot-${i}`).style.background = (i === n) ? '#b8a2ff' : '#5e5b68';
+  });
+  document.getElementById(`ob-step-${n}`)?.classList.remove('hidden');
+};
+
+window.finishOnboarding = async () => {
+  const title = document.getElementById('ob-title').value.trim();
+  if(!title) return document.getElementById('ob-title').focus();
+  const btn = document.getElementById('ob-finish-btn');
+  btn.disabled = true; btn.textContent = '생성 중...';
+  
+  const work = {
+    title, genre: document.getElementById('ob-genre').value,
+    status: document.getElementById('ob-status').value,
+    dailyGoal: parseInt(document.getElementById('ob-daily-goal').value) || 5000,
+    createdAt: new Date().toISOString()
+  };
+  const id = await window.saveWork(work);
+  if(id) {
+    window.appData.activeWorkId = id;
+    localStorage.setItem('sv_activeWork', id);
+    localStorage.setItem('sv_workName', title);
+    goObStep(3);
+  }
+  btn.disabled = false; btn.textContent = '작품 만들기 →';
+};
+
+window.enterApp = () => showApp(window.appData.user);
+
+function renderDashboard() {
+  const active = window.appData.works.find(w => w.id === window.appData.activeWorkId) || window.appData.works[0];
+  if(active) {
+    window.appData.activeWorkId = active.id;
+    localStorage.setItem('sv_activeWork', active.id);
+    localStorage.setItem('sv_workName', active.title);
+    document.getElementById('active-work-name').textContent = active.title;
+    document.getElementById('sidebar-work-name').textContent = active.title;
+    document.getElementById('sidebar-work-status').textContent = active.genre;
+    document.getElementById('daily-goal').textContent = (active.dailyGoal || 5000).toLocaleString();
+    const pct = Math.min(100, Math.round(window.appData.todayChars / (active.dailyGoal || 5000) * 100));
+    document.getElementById('today-progress').style.width = pct + '%';
+  }
+  
+  const list = document.getElementById('work-dropdown-list');
+  list.innerHTML = window.appData.works.map(w => `
+    <div class="work-option ${w.id === window.appData.activeWorkId ? 'active' : ''}" onclick="switchWork('${w.id}')">
+      <div class="font-semibold text-sm text-white">${w.title}</div>
+      <div class="text-xs text-[#9e9aaa]">${w.genre}</div>
+    </div>
+  `).join('');
+
+  const grid = document.getElementById('works-grid');
+  grid.innerHTML = window.appData.works.map(w => `
+    <div class="glass-bright p-5 rounded-2xl card-glow cursor-pointer transition-all" onclick="switchWork('${w.id}')">
+      <div class="flex justify-between items-start mb-4">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-[#7c50ff] bg-opacity-20 text-[#b8a2ff]">
+          <span class="mat-icon">book</span>
+        </div>
+        <span class="badge ${w.status==='writing'?'badge-writing':'badge-plan'}">${w.status}</span>
+      </div>
+      <h3 class="font-bold text-white mb-1 truncate">${w.title}</h3>
+      <p class="text-xs text-[#9e9aaa] mb-4">${w.genre}</p>
+    </div>
+  `).join('');
+}
+
+window.switchWork = (id) => {
+  window.appData.activeWorkId = id;
+  localStorage.setItem('sv_activeWork', id);
+  renderDashboard();
+  document.getElementById('work-dropdown').classList.remove('open');
+};
+
+window.toggleWorkDropdown = () => document.getElementById('work-dropdown').classList.toggle('open');
+window.openNewWorkModal = () => document.getElementById('new-work-modal').classList.remove('hidden');
+
+window.createWork = async () => {
+  const title = document.getElementById('nw-title').value.trim();
+  if(!title) return;
+  const work = {
+    title, genre: document.getElementById('nw-genre').value,
+    status: document.getElementById('nw-status').value,
+    dailyGoal: parseInt(document.getElementById('nw-goal').value) || 5000,
+    createdAt: new Date().toISOString()
+  };
+  const id = await window.saveWork(work);
+  if(id) {
+    document.getElementById('new-work-modal').classList.add('hidden');
+    document.getElementById('nw-title').value = '';
+  }
+};
+</script>
 </body>
 </html>

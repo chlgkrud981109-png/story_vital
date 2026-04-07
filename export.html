@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>내보내기 — StoryVital</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&family=Noto+Serif+KR:wght@300;400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, user => {
+    if (!user) { location.href = 'index.html'; }
+    else { window.currentUser = user; }
+  });
+</script>
+
+<script>
+  tailwind.config = {
+    darkMode:'class',
+    theme:{ extend:{ colors:{ surface:'#09090d','surface-low':'#0e0e13','surface-mid':'#141419','surface-high':'#1a1a21','surface-bright':'#22222b',primary:'#b8a2ff','primary-dim':'#7c50ff',secondary:'#c490ff','secondary-dim':'#9d60f0',tertiary:'#ff9bbf','tertiary-dim':'#e8587a',success:'#40d0a8',outline:'#5e5b68','outline-variant':'#36333f','on-surface':'#eae6f4','on-surface-variant':'#9e9aaa' }, fontFamily:{ display:['Manrope','sans-serif'],serif:['Noto Serif KR','serif'] } } }
+  };
+</script>
+
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+.mat-icon { font-family:'Material Symbols Outlined'; font-style:normal; user-select:none; line-height:1; }
+body { background:#09090d; color:#eae6f4; font-family:'Manrope',sans-serif; overflow-x:hidden; }
+.glass { background:rgba(20,20,25,0.7); backdrop-filter:blur(20px); border:1px solid rgba(184,162,255,0.09); }
+.glass-bright { background:rgba(26,26,33,0.85); backdrop-filter:blur(24px); border:1px solid rgba(184,162,255,0.12); }
+.nav-link { color:#9e9aaa; transition:color 0.15s; }
+.nav-active { color:#b8a2ff !important; }
+.sidebar-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; color:#9e9aaa; font-size:14px; transition:all 0.15s; cursor:pointer; text-decoration:none; }
+.sidebar-active { background:rgba(124,80,255,0.15); color:#b8a2ff; border-left:2px solid #7c50ff; padding-left:10px; }
+.inp { background:rgba(0,0,0,0.6); border:1px solid rgba(184,162,255,0.1); border-radius:10px; padding:10px 14px; color:#eae6f4; font-size:14px; width:100%; outline:none; transition:border-color 0.2s,box-shadow 0.2s; font-family:'Manrope',sans-serif; }
+.plat-card { border:1px solid rgba(184,162,255,0.1); border-radius:12px; padding:12px 14px; cursor:pointer; transition:all 0.18s; display:flex; align-items:center; gap:12px; }
+.plat-card.active { border-color:rgba(124,80,255,0.5); background:rgba(124,80,255,0.08); }
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.fade-up { animation:fadeUp 0.4s ease forwards; }
+@media(min-width:1024px) { .sidebar-desktop{display:flex} .ml-sidebar{margin-left:224px} }
+</style>
+</head>
+
+<body>
+<nav class="fixed top-0 left-0 right-0 z-[100] h-16 glass-bright flex items-center justify-between px-4 lg:px-6">
+  <div class="flex items-center gap-3">
+    <a href="index.html" class="flex items-center gap-2">
+      <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#7c50ff,#b8a2ff)">
+        <span class="mat-icon text-white" style="font-size:14px">auto_stories</span>
+      </div>
+      <span class="font-display font-extrabold text-white text-base hidden sm:block">StoryVital</span>
+    </a>
+    <div class="hidden lg:flex items-center gap-5 ml-4" style="font-size:14px">
+      <a href="index.html" class="nav-link">대시보드</a>
+      <a href="characters.html" class="nav-link">캐릭터</a>
+      <a href="chapters.html" class="nav-link">챕터 트래커</a>
+      <a href="export.html" class="nav-active font-semibold">내보내기</a>
+    </div>
+  </div>
+</nav>
+
+<aside class="sidebar-desktop fixed left-0 top-16 bottom-0 w-56 flex-col py-5 z-50" style="background:#0e0e13;border-right:1px solid rgba(184,162,255,0.06)">
+  <div class="px-4 mb-4">
+    <p class="text-xs uppercase tracking-widest mb-1" style="color:#5e5b68">현재 작품</p>
+    <p class="font-display font-bold text-white text-sm" id="sidebar-work-name">-</p>
+  </div>
+  <nav class="flex-1 px-2 space-y-0.5">
+    <a href="index.html" class="sidebar-item"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
+    <a href="characters.html" class="sidebar-item"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
+    <a href="chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
+    <a href="export.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
+  </nav>
+</aside>
+
+<main class="ml-sidebar pt-16 min-h-screen px-4 lg:px-8 py-7" style="padding-bottom:80px">
+  <div class="mb-5 fade-up">
+    <h1 class="text-xl font-display font-extrabold text-white mb-1">플랫폼 맞춤 내보내기</h1>
+    <p class="text-sm" style="color:#9e9aaa">원고를 붙여넣으면 플랫폼별 형식으로 즉시 변환합니다</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div class="space-y-4">
+      <div class="glass-bright rounded-xl p-5 fade-up">
+        <h3 class="text-sm font-semibold text-white mb-3">플랫폼 선택</h3>
+        <div class="grid grid-cols-2 gap-2" id="plat-list">
+          <div class="plat-card active" onclick="setPlatform('munpia')">📗 문피아</div>
+          <div class="plat-card" onclick="setPlatform('kakao')">🟡 카카오페이지</div>
+        </div>
+      </div>
+      <div class="fade-up">
+        <textarea id="raw-input" rows="14" class="inp" placeholder="여기에 원고를 붙여넣으세요..." oninput="process()"></textarea>
+      </div>
+    </div>
+    <div class="space-y-4">
+      <div class="fade-up">
+        <div class="flex justify-between mb-2">
+          <span class="text-xs text-gray-400" id="out-chars">0자</span>
+          <button onclick="copyOutput()" class="bg-[#7c50ff] text-white px-4 py-2 rounded-xl text-xs font-bold">복사</button>
+        </div>
+        <textarea id="out-text" rows="22" readonly class="inp font-serif text-sm"></textarea>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+window.setPlatform = (p) => {
+  document.querySelectorAll('.plat-card').forEach(c => c.classList.remove('active'));
+  localStorage.setItem('sv_exp_plat', p);
+  // Add active class logic here
+  process();
+};
+
+window.process = () => {
+  const raw = document.getElementById('raw-input').value;
+  localStorage.setItem('sv_exp_raw', raw);
+  const out = raw.split('\n').map(l => l.trim()).join('\n\n'); // Simple transform for example
+  document.getElementById('out-text').value = out;
+  document.getElementById('out-chars').textContent = out.length + '자';
+};
+
+window.copyOutput = () => {
+  const text = document.getElementById('out-text').value;
+  navigator.clipboard.writeText(text).then(() => alert('복사되었습니다.'));
+};
+
+window.addEventListener('load', () => {
+  document.getElementById('sidebar-work-name').textContent = localStorage.getItem('sv_workName') || '-';
+  const savedRaw = localStorage.getItem('sv_exp_raw');
+  if (savedRaw) { document.getElementById('raw-input').value = savedRaw; process(); }
+});
+</script>
+</body>
+</html>

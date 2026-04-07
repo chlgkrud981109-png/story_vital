@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>캐릭터 DB — StoryVital</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&family=Noto+Serif+KR:wght@300;400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      window.currentUser = user;
+      const activeWorkId = localStorage.getItem('sv_activeWork');
+      if (!activeWorkId) { location.href = 'index.html'; return; }
+      
+      const q = query(collection(db, 'characters'), where('projectId', '==', activeWorkId));
+      onSnapshot(q, snap => {
+        window.appChars = snap.docs.map(d => ({ id: d.id, ...d.data(), name: d.data().fullName })); // Mapping fullName to name for UI
+        applyRender();
+      });
+    } else {
+      location.href = 'index.html';
+    }
+  });
+
+  window.saveCharDb = async (char) => {
+    const activeWorkId = localStorage.getItem('sv_activeWork');
+    if (!window.currentUser || !activeWorkId || !db) return null;
+    
+    const charData = { 
+      ...char, 
+      fullName: char.name, // Mapping name to fullName for DB
+      projectId: activeWorkId,
+      updatedAt: new Date().toISOString()
+    };
+    delete charData.name; // Use fullName instead of name in DB
+
+    try {
+      if (char.id && !char.id.startsWith('local')) {
+        const id = char.id;
+        delete charData.id;
+        await updateDoc(doc(db, 'characters', id), charData);
+        return id;
+      } else {
+        const docRef = await addDoc(collection(db, 'characters'), charData);
+        return docRef.id;
+      }
+    } catch(e) { console.error(e); return null; }
+  };
+
+  window.deleteCharDb = async (id) => {
+    if (!id || id.startsWith('local')) return;
+    try { await deleteDoc(doc(db, 'characters', id)); } catch(e) { console.error(e); }
+  };
+</script>
+
+<script>
+  tailwind.config = {
+    darkMode:'class',
+    theme: { extend: { colors: { surface:'#09090d','surface-low':'#0e0e13','surface-mid':'#141419','surface-high':'#1a1a21','surface-bright':'#22222b',primary:'#b8a2ff','primary-dim':'#7c50ff',secondary:'#c490ff','secondary-dim':'#9d60f0',tertiary:'#ff9bbf','tertiary-dim':'#e8587a',success:'#40d0a8',outline:'#5e5b68','outline-variant':'#36333f','on-surface':'#eae6f4','on-surface-variant':'#9e9aaa' }, fontFamily:{ display:['Manrope','sans-serif'] } } }
+  };
+</script>
+
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+.mat-icon { font-family:'Material Symbols Outlined'; font-style:normal; user-select:none; line-height:1; }
+body { background:#09090d; color:#eae6f4; font-family:'Manrope',sans-serif; overflow-x:hidden; }
+.glass { background:rgba(20,20,25,0.7); backdrop-filter:blur(20px); border:1px solid rgba(184,162,255,0.09); }
+.glass-bright { background:rgba(26,26,33,0.85); backdrop-filter:blur(24px); border:1px solid rgba(184,162,255,0.12); }
+.glow { box-shadow:0 0 24px rgba(124,80,255,0.35); }
+.nav-link { color:#9e9aaa; transition:color 0.15s; }
+.nav-link:hover { color:#eae6f4; }
+.nav-active { color:#b8a2ff !important; }
+.sidebar-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; color:#9e9aaa; font-size:14px; transition:all 0.15s; cursor:pointer; text-decoration:none; }
+.sidebar-item:hover { background:rgba(255,255,255,0.04); color:#eae6f4; }
+.sidebar-active { background:rgba(124,80,255,0.15); color:#b8a2ff; border-left:2px solid #7c50ff; padding-left:10px; }
+.inp { background:rgba(0,0,0,0.6); border:1px solid rgba(184,162,255,0.1); border-radius:10px; padding:10px 14px; color:#eae6f4; font-size:14px; width:100%; outline:none; transition:border-color 0.2s,box-shadow 0.2s; font-family:'Manrope',sans-serif; }
+.inp:focus { border-color:#7c50ff; box-shadow:0 0 0 3px rgba(124,80,255,0.15); }
+.char-card { border:1px solid rgba(184,162,255,0.08); border-radius:14px; transition:all 0.2s ease; cursor:pointer; background:rgba(26,26,33,0.6); }
+.char-card:hover { transform:translateY(-3px); border-color:rgba(184,162,255,0.2); box-shadow:0 12px 32px rgba(0,0,0,0.4); }
+.detail-panel { position:fixed; right:-520px; top:0; bottom:0; width:480px; z-index:200; transition:right 0.35s cubic-bezier(0.4,0,0.2,1); background:#0e0e13; border-left:1px solid rgba(184,162,255,0.1); display:flex; flex-direction:column; overflow:hidden; }
+.detail-panel.open { right:0; }
+.detail-overlay { position:fixed; inset:0; z-index:199; background:rgba(0,0,0,0.4); display:none; }
+.detail-overlay.open { display:block; }
+.form-drawer { position:fixed; right:-520px; top:0; bottom:0; width:480px; z-index:300; transition:right 0.35s cubic-bezier(0.4,0,0.2,1); background:#0e0e13; border-left:1px solid rgba(184,162,255,0.12); display:flex; flex-direction:column; }
+.form-drawer.open { right:0; }
+.filter-pill { padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s; border:1px solid rgba(184,162,255,0.15); color:#9e9aaa; }
+.filter-pill.active { background:rgba(124,80,255,0.2); color:#b8a2ff; border-color:rgba(124,80,255,0.4); }
+.tag { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px; font-size:12px; background:rgba(124,80,255,0.15); color:#b8a2ff; border:1px solid rgba(124,80,255,0.25); }
+.relation-row { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:10px; background:rgba(0,0,0,0.3); margin-bottom:6px; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.fade-up { animation:fadeUp 0.4s ease forwards; }
+@media(min-width:1024px) { .sidebar-desktop{display:flex} .ml-sidebar{margin-left:224px} }
+</style>
+</head>
+
+<body>
+<nav class="fixed top-0 left-0 right-0 z-[100] h-16 glass-bright flex items-center justify-between px-4 lg:px-6">
+  <div class="flex items-center gap-3">
+    <a href="index.html" class="flex items-center gap-2">
+      <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#7c50ff,#b8a2ff)">
+        <span class="mat-icon text-white" style="font-size:14px">auto_stories</span>
+      </div>
+      <span class="font-display font-extrabold text-white text-base hidden sm:block">StoryVital</span>
+    </a>
+    <div class="hidden lg:flex items-center gap-5 ml-4" style="font-size:14px">
+      <a href="index.html" class="nav-link">대시보드</a>
+      <a href="characters.html" class="nav-active font-semibold">캐릭터</a>
+      <a href="chapters.html" class="nav-link">챕터 트래커</a>
+      <a href="export.html" class="nav-link">내보내기</a>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <div class="hidden sm:flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm" style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,162,255,0.1)">
+      <span class="mat-icon text-sm" style="color:#b8a2ff;font-size:15px">book</span>
+      <span class="text-white font-semibold text-xs" id="nav-work-name">-</span>
+    </div>
+    <img src="https://api.dicebear.com/7.x/initials/svg?seed=작가&backgroundColor=7c50ff" id="user-avatar" class="w-8 h-8 rounded-full object-cover" style="border:1px solid rgba(124,80,255,0.4)"/>
+  </div>
+</nav>
+
+<aside class="sidebar-desktop fixed left-0 top-16 bottom-0 w-56 flex-col py-5 z-50" style="background:#0e0e13;border-right:1px solid rgba(184,162,255,0.06)">
+  <div class="px-4 mb-4">
+    <p class="text-xs uppercase tracking-widest mb-1" style="color:#5e5b68">현재 작품</p>
+    <p class="font-display font-bold text-white text-sm" id="sidebar-work-name">-</p>
+  </div>
+  <nav class="flex-1 px-2 space-y-0.5">
+    <a href="index.html" class="sidebar-item"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
+    <a href="characters.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
+    <a href="chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
+    <a href="export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
+  </nav>
+</aside>
+
+<main class="ml-sidebar pt-16 min-h-screen" style="padding-bottom:80px">
+  <div class="sticky top-16 z-[80]" style="background:rgba(9,9,13,0.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(184,162,255,0.06)">
+    <div class="px-4 lg:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+      <div class="flex-1 text-white font-bold">캐릭터 데이터베이스 <span id="char-count-label" class="text-sm font-normal text-gray-400">· 0명</span></div>
+      <div class="flex items-center gap-2">
+        <input id="search-input" type="text" placeholder="검색..." class="inp w-48 sm:w-64" oninput="onSearch(this.value)"/>
+        <button onclick="openFormDrawer(null)" class="bg-[#7c50ff] text-white px-4 py-2 rounded-xl text-sm font-bold glow">추가</button>
+      </div>
+    </div>
+    <div class="px-4 lg:px-8 pb-3 flex gap-2">
+      <button onclick="setFilter('all')" class="filter-pill active" data-f="all">전체</button>
+      <button onclick="setFilter('주인공')" class="filter-pill" data-f="주인공">주인공</button>
+      <button onclick="setFilter('조연')" class="filter-pill" data-f="조연">조연</button>
+    </div>
+  </div>
+  <div class="px-4 lg:px-8 py-5">
+    <div id="char-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
+  </div>
+</main>
+
+<div id="detail-overlay" class="detail-overlay" onclick="closeDetail()"></div>
+<div id="detail-panel" class="detail-panel pt-16">
+  <div class="flex justify-between px-5 py-4 border-b border-white/10 text-white font-bold">캐릭터 상세 <button onclick="closeDetail()">✕</button></div>
+  <div id="detail-content" class="overflow-y-auto p-5"></div>
+</div>
+
+<div id="form-drawer" class="form-drawer pt-16">
+  <div class="flex justify-between px-5 py-4 border-b border-white/10 text-white font-bold" id="form-title">새 캐릭터 <button onclick="closeFormDrawer()">✕</button></div>
+  <div class="overflow-y-auto p-5 space-y-4">
+    <input type="hidden" id="edit-id"/>
+    <input id="f-name" type="text" placeholder="이름 *" class="inp"/>
+    <select id="f-role" class="inp"><option>주인공</option><option>조연</option><option>빌런</option></select>
+    <textarea id="f-appearance" placeholder="외모" class="inp h-20"></textarea>
+    <textarea id="f-personality" placeholder="성격" class="inp h-20"></textarea>
+  </div>
+  <div class="p-5 flex gap-2"><button onclick="saveChar()" class="bg-[#7c50ff] text-white w-full py-3 rounded-xl font-bold">저장</button></div>
+</div>
+
+<script>
+let state = { filter:'all', search:'', chars:[], selectedId:null };
+const COLORS = ['#7c50ff','#9d60f0','#e8587a','#5080ff'];
+
+window.applyRender = () => {
+  let list = [...(window.appChars || [])];
+  if (state.filter !== 'all') list = list.filter(c => c.role === state.filter);
+  if (state.search) list = list.filter(c => c.name.toLowerCase().includes(state.search.toLowerCase()));
+  
+  document.getElementById('char-count-label').textContent = `· ${list.length}명`;
+  const grid = document.getElementById('char-grid');
+  grid.innerHTML = list.map(c => `
+    <div class="char-card p-4 fade-up" onclick="openDetail('${c.id}')">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style="background:${c.color||'#7c50ff'}">${c.name[0]}</div>
+        <div class="text-white font-bold">${c.name}</div>
+      </div>
+      <div class="text-xs text-gray-400">${c.role}</div>
+    </div>
+  `).join('');
+};
+
+window.onSearch = (v) => { state.search = v; applyRender(); };
+window.setFilter = (f) => { state.filter = f; document.querySelectorAll('.filter-pill').forEach(b => b.classList.toggle('active', b.dataset.f===f)); applyRender(); };
+window.openDetail = (id) => {
+  const c = window.appChars.find(x => x.id === id);
+  document.getElementById('detail-content').innerHTML = `<h2 class="text-white text-xl font-bold mb-2">${c.name}</h2><p class="text-gray-400">${c.role}</p><p class="mt-4 text-sm">${c.appearance||''}</p>`;
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('detail-overlay').classList.add('open');
+};
+window.closeDetail = () => { document.getElementById('detail-panel').classList.remove('open'); document.getElementById('detail-overlay').classList.remove('open'); };
+window.openFormDrawer = (id) => { document.getElementById('edit-id').value = id||''; document.getElementById('f-name').value = ''; document.getElementById('form-drawer').classList.add('open'); };
+window.closeFormDrawer = () => document.getElementById('form-drawer').classList.remove('open');
+
+window.saveChar = async () => {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) return;
+  const id = document.getElementById('edit-id').value;
+  const char = { name, role: document.getElementById('f-role').value, appearance: document.getElementById('f-appearance').value, personality: document.getElementById('f-personality').value };
+  await window.saveCharDb({ ...char, id });
+  closeFormDrawer();
+};
+
+window.addEventListener('load', () => {
+  document.getElementById('nav-work-name').textContent = localStorage.getItem('sv_workName') || '-';
+  document.getElementById('sidebar-work-name').textContent = localStorage.getItem('sv_workName') || '-';
+});
+</script>
+</body>
+</html>
