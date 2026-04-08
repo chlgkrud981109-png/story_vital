@@ -11,33 +11,100 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
   import { firebaseConfig } from './firebase-config.js';
 
   let app, db, auth;
+  let isAuthLoading = true; // 인증 로딩 상태 초기화
+
   try {
     app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
+    // ─── 유저 프로필 생성/업데이트 인라인 로직 ───
+    async function createUserProfile(user) {
+      if (!user) return;
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        const now = new Date().toISOString();
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            photoURL: user.photoURL,
+            createdAt: now,
+            lastLoginAt: now
+          });
+        } else {
+          await setDoc(userRef, { lastLoginAt: now }, { merge: true });
+        }
+      } catch (e) {
+        console.error("[Profile] Error updating profile:", e);
+      }
+    }
+
+    // ─── 리다이렉트 결과 처리 ───
+    getRedirectResult(auth).then(async (result) => {
+      if (result && result.user) {
+        console.log("[Auth] Redirect successful:", result.user.displayName);
+        await createUserProfile(result.user);
+      }
+    }).catch((error) => {
+      console.error("[Auth] Redirect error:", error.code, error.message);
+      // 에러 발생 시 무한 루프 방지 및 유저에게 알림
+      isAuthLoading = false;
+      const authCard = document.querySelector('#auth-screen .glass-bright');
+      if (authCard) {
+        authCard.innerHTML += `<p class="text-xs mt-3 text-red-400">로그인 에러: ${error.message}<br/>잠시 후 다시 시도해 주세요.</p>`;
+      }
+    });
+
     window.signInWithGoogle = async () => {
-      try { await signInWithPopup(auth, provider); }
-      catch(e) { loadDemoMode(); }
+      try { 
+        console.log("[Auth] Starting signInWithRedirect...");
+        await signInWithRedirect(auth, provider); 
+      }
+      catch(e) { 
+        console.error("[Auth] Redirect initiation failed:", e);
+        loadDemoMode(); 
+      }
     };
-    window.signOutUser = async () => { await signOut(auth); location.reload(); };
+
+    window.signOutUser = async () => { 
+      await signOut(auth); 
+      window.location.href = './index.html'; 
+    };
 
     onAuthStateChanged(auth, async (user) => {
+      isAuthLoading = false; // 상태 결정됨
+      const path = window.location.pathname;
+      const isHome = path === '/' || path.includes('index.html');
+
       if (user) {
         window.currentUser = user;
         showApp(user);
         await loadUserData(user.uid);
       } else {
-        showAuth();
+        // [무한 루프 원천 차단] 
+        // 1. 이미 홈이면 리다이렉트하지 않음 (Auth Screen 표시)
+        // 2. 다른 페이지라면 홈으로 이동
+        if (isHome) {
+          showAuth();
+        } else {
+          console.log("[Auth] No user found on internal page, redirecting to home...");
+          window.location.href = './index.html';
+        }
       }
     });
-  } catch(e) { /* Firebase not configured */ }
+  } catch(e) { 
+    console.error("Firebase Initialization Error:", e);
+    isAuthLoading = false;
+  }
 
   async function loadUserData(uid) {
     try {

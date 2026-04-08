@@ -1,7 +1,7 @@
 import { auth } from './config.js';
 import { 
   GoogleAuthProvider, 
-  signInWithPopup, 
+  signInWithRedirect, 
   onAuthStateChanged,
   signOut 
 } from "firebase/auth";
@@ -10,17 +10,12 @@ import { createUserProfile } from './db.js';
 const provider = new GoogleAuthProvider();
 
 export const signInWithGoogle = async () => {
-  console.log("[Auth] Calling signInWithPopup(auth, provider)...");
+  console.log("[Auth] Calling signInWithRedirect(auth, provider)...");
   try {
-    const result = await signInWithPopup(auth, provider);
-    if (result && result.user) {
-      console.log("[Auth] Popup successful, user:", result.user.displayName);
-      await createUserProfile(result.user);
-      return result.user;
-    }
+    await signInWithRedirect(auth, provider);
+    // Note: getRedirectResult should be handled in the main entry point (index.html)
   } catch (error) {
-    console.error("Login failed:", error.code, error.message);
-    alert(`구글 로그인 중 오류가 발생했습니다: ${error.message}`);
+    console.error("Login initiation failed:", error.code, error.message);
     throw error;
   }
 };
