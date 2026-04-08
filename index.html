@@ -13,7 +13,7 @@
   import { getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-  import { firebaseConfig } from './firebase-config.local.js';
+  import { firebaseConfig } from './firebase-config.js';
 
   let app, db, auth;
   try {
@@ -403,10 +403,10 @@ select.inp option { background: #1a1a21; }
       </a>
       <!-- Desktop nav -->
       <div class="hidden lg:flex items-center gap-5 ml-4" style="font-size:14px">
-        <a href="index.html" class="nav-active font-semibold">대시보드</a>
-        <a href="characters.html" class="nav-link">캐릭터</a>
-        <a href="chapters.html" class="nav-link">챕터 트래커</a>
-        <a href="export.html" class="nav-link">내보내기</a>
+        <a href="./index.html" class="nav-active font-semibold">대시보드</a>
+        <a href="./characters.html" class="nav-link">캐릭터</a>
+        <a href="./chapters.html" class="nav-link">챕터 트래커</a>
+        <a href="./export.html" class="nav-link">내보내기</a>
       </div>
     </div>
 
@@ -445,10 +445,10 @@ select.inp option { background: #1a1a21; }
       <p class="font-display font-bold text-white text-sm" id="mobile-work-name">-</p>
     </div>
     <nav class="flex-1 px-3 space-y-1">
-      <a href="index.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
-      <a href="characters.html" class="sidebar-item"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
-      <a href="chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
-      <a href="export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
+      <a href="./index.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
+      <a href="./characters.html" class="sidebar-item"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
+      <a href="./chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
+      <a href="./export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
     </nav>
     <div class="px-3 pb-6">
       <button onclick="window.signOutUser && window.signOutUser()" class="sidebar-item w-full"><span class="mat-icon text-lg">logout</span>로그아웃</button>
@@ -463,10 +463,10 @@ select.inp option { background: #1a1a21; }
       <p class="text-xs mt-0.5" style="color:#9e9aaa" id="sidebar-work-status">-</p>
     </div>
     <nav class="flex-1 px-2 space-y-0.5">
-      <a href="index.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
-      <a href="characters.html" class="sidebar-item"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
-      <a href="chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
-      <a href="export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
+      <a href="./index.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
+      <a href="./characters.html" class="sidebar-item"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
+      <a href="./chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
+      <a href="./export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
     </nav>
     <div class="px-2">
       <button onclick="window.signOutUser && window.signOutUser()" class="sidebar-item w-full"><span class="mat-icon text-lg">logout</span><span id="sidebar-username">로그아웃</span></button>
@@ -620,16 +620,16 @@ select.inp option { background: #1a1a21; }
 
   <!-- MOBILE BOTTOM NAV -->
   <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-[90] h-16 flex items-center justify-around" style="background:rgba(9,9,13,0.95);border-top:1px solid rgba(184,162,255,0.08)">
-    <a href="index.html" class="flex flex-col items-center gap-1" style="color:#b8a2ff">
+    <a href="./index.html" class="flex flex-col items-center gap-1" style="color:#b8a2ff">
       <span class="mat-icon text-xl">dashboard</span><span style="font-size:10px">홈</span>
     </a>
-    <a href="characters.html" class="flex flex-col items-center gap-1 nav-link">
+    <a href="./characters.html" class="flex flex-col items-center gap-1 nav-link">
       <span class="mat-icon text-xl">group</span><span style="font-size:10px">캐릭터</span>
     </a>
-    <a href="chapters.html" class="flex flex-col items-center gap-1 nav-link">
+    <a href="./chapters.html" class="flex flex-col items-center gap-1 nav-link">
       <span class="mat-icon text-xl">auto_stories</span><span style="font-size:10px">챕터</span>
     </a>
-    <a href="export.html" class="flex flex-col items-center gap-1 nav-link">
+    <a href="./export.html" class="flex flex-col items-center gap-1 nav-link">
       <span class="mat-icon text-xl">upload_file</span><span style="font-size:10px">내보내기</span>
     </a>
   </nav>

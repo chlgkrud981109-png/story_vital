@@ -12,7 +12,7 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-  import { firebaseConfig } from './firebase-config.local.js';
+  import { firebaseConfig } from './firebase-config.js';
 
   let db, auth;
   try {
@@ -139,17 +139,17 @@ select.inp option { background:#1a1a21; }
 <!-- NAV -->
 <nav class="fixed top-0 left-0 right-0 z-[100] h-16 glass-bright flex items-center justify-between px-4 lg:px-6">
   <div class="flex items-center gap-3">
-    <a href="index.html" class="flex items-center gap-2">
+    <a href="./index.html" class="flex items-center gap-2">
       <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#7c50ff,#b8a2ff)">
         <span class="mat-icon text-white" style="font-size:14px">auto_stories</span>
       </div>
       <span class="font-display font-extrabold text-white text-base hidden sm:block">StoryVital</span>
     </a>
     <div class="hidden lg:flex items-center gap-5 ml-4" style="font-size:14px">
-      <a href="index.html" class="nav-link">대시보드</a>
-      <a href="characters.html" class="nav-active font-semibold">캐릭터</a>
-      <a href="chapters.html" class="nav-link">챕터 트래커</a>
-      <a href="export.html" class="nav-link">내보내기</a>
+      <a href="./index.html" class="nav-link">대시보드</a>
+      <a href="./characters.html" class="nav-active font-semibold">캐릭터</a>
+      <a href="./chapters.html" class="nav-link">챕터 트래커</a>
+      <a href="./export.html" class="nav-link">내보내기</a>
     </div>
   </div>
   <div class="flex items-center gap-2">
@@ -170,10 +170,10 @@ select.inp option { background:#1a1a21; }
     <p class="font-display font-bold text-white text-sm" id="sidebar-work-name">-</p>
   </div>
   <nav class="flex-1 px-2 space-y-0.5">
-    <a href="index.html" class="sidebar-item"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
-    <a href="characters.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
-    <a href="chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
-    <a href="export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
+    <a href="./index.html" class="sidebar-item"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
+    <a href="./characters.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
+    <a href="./chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
+    <a href="./export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
   </nav>
 </aside>
 
@@ -245,10 +245,10 @@ select.inp option { background:#1a1a21; }
 
 <!-- MOBILE NAV -->
 <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-[90] h-16 flex items-center justify-around" style="background:rgba(9,9,13,0.95);border-top:1px solid rgba(184,162,255,0.08)">
-  <a href="index.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">dashboard</span><span style="font-size:10px">홈</span></a>
-  <a href="characters.html" class="flex flex-col items-center gap-1" style="color:#b8a2ff"><span class="mat-icon text-xl">group</span><span style="font-size:10px">캐릭터</span></a>
-  <a href="chapters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">auto_stories</span><span style="font-size:10px">챕터</span></a>
-  <a href="export.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">upload_file</span><span style="font-size:10px">내보내기</span></a>
+  <a href="./index.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">dashboard</span><span style="font-size:10px">홈</span></a>
+  <a href="./characters.html" class="flex flex-col items-center gap-1" style="color:#b8a2ff"><span class="mat-icon text-xl">group</span><span style="font-size:10px">캐릭터</span></a>
+  <a href="./chapters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">auto_stories</span><span style="font-size:10px">챕터</span></a>
+  <a href="./export.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">upload_file</span><span style="font-size:10px">내보내기</span></a>
 </nav>
 
 <!-- DETAIL PANEL OVERLAY -->

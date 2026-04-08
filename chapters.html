@@ -13,7 +13,7 @@
   import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-  import { firebaseConfig } from './firebase-config.local.js';
+  import { firebaseConfig } from './firebase-config.js';
 
   let db, auth;
   try {
@@ -148,10 +148,10 @@
       <span class="font-display font-bold text-white text-lg">StoryVital</span>
     </a>
     <div class="hidden md:flex items-center gap-6 text-sm">
-      <a href="index.html" class="text-on-surface-variant hover:text-on-surface transition-colors">대시보드</a>
-      <a href="characters.html" class="text-on-surface-variant hover:text-on-surface transition-colors">캐릭터</a>
-      <a href="chapters.html" class="nav-active font-semibold">챕터 트래커</a>
-      <a href="export.html" class="text-on-surface-variant hover:text-on-surface transition-colors">내보내기</a>
+      <a href="./index.html" class="text-on-surface-variant hover:text-on-surface transition-colors">대시보드</a>
+      <a href="./characters.html" class="text-on-surface-variant hover:text-on-surface transition-colors">캐릭터</a>
+      <a href="./chapters.html" class="nav-active font-semibold">챕터 트래커</a>
+      <a href="./export.html" class="text-on-surface-variant hover:text-on-surface transition-colors">내보내기</a>
     </div>
   </div>
   <div class="flex items-center gap-3">
@@ -172,16 +172,16 @@
       <p class="text-xs text-on-surface-variant mt-0.5">집필 중</p>
     </div>
     <nav class="flex-1 px-2 space-y-1 text-sm">
-      <a href="index.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
+      <a href="./index.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
         <span class="mat-icon text-lg">dashboard</span><span>대시보드</span>
       </a>
-      <a href="characters.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
+      <a href="./characters.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
         <span class="mat-icon text-lg">group</span><span>캐릭터 DB</span>
       </a>
-      <a href="chapters.html" class="sidebar-active flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all">
+      <a href="./chapters.html" class="sidebar-active flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all">
         <span class="mat-icon text-lg">format_list_bulleted</span><span>챕터 트래커</span>
       </a>
-      <a href="export.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
+      <a href="./export.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
         <span class="mat-icon text-lg">upload_file</span><span>내보내기</span>
       </a>
     </nav>
@@ -316,16 +316,16 @@
 <!-- MOBILE NAV -->
 <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around"
   style="background: rgba(10,10,14,0.95); border-top: 1px solid rgba(184,162,255,0.08)">
-  <a href="index.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
+  <a href="./index.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
     <span class="mat-icon text-xl">dashboard</span><span class="text-xs">홈</span>
   </a>
-  <a href="characters.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
+  <a href="./characters.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
     <span class="mat-icon text-xl">group</span><span class="text-xs">캐릭터</span>
   </a>
-  <a href="chapters.html" class="flex flex-col items-center gap-1 text-primary">
+  <a href="./chapters.html" class="flex flex-col items-center gap-1 text-primary">
     <span class="mat-icon text-xl">auto_stories</span><span class="text-xs">챕터</span>
   </a>
-  <a href="export.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
+  <a href="./export.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
     <span class="mat-icon text-xl">upload_file</span><span class="text-xs">내보내기</span>
   </a>
 </nav>
