@@ -1,198 +1,233 @@
 import { db } from './config.js';
-import { doc, setDoc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, onSnapshot, updateDoc, deleteDoc } from "firebase/firestore";
+import { 
+  doc, setDoc, getDoc, collection, addDoc, serverTimestamp, 
+  query, where, getDocs, onSnapshot, updateDoc, deleteDoc, 
+  orderBy, limit 
+} from "firebase/firestore";
 
-// Characters: 캐릭터 삭제 (Delete)
-export const deleteCharacter = async (charId) => {
-  try {
-    const charRef = doc(db, 'characters', charId);
-    await deleteDoc(charRef);
-    return charId;
-  } catch (e) {
-    console.error("캐릭터 삭제 실패: ", e);
-    throw e;
-  }
-};
+// ─── 유저 (Users) ─────────────────────────────────────────
 
-
-// Characters: 캐릭터 수정 (Update)
-export const updateCharacter = async (charId, characterData) => {
-  try {
-    const charRef = doc(db, 'characters', charId);
-    await updateDoc(charRef, {
-      ...characterData,
-      updatedAt: serverTimestamp()
-    });
-    return charId;
-  } catch (e) {
-    console.error("캐릭터 수정 실패: ", e);
-    throw e;
-  }
-};
-
-
-// Users 컬렉션
+/** 유저 프로필 생성 및 최근 접속 시간 업데이트 */
 export const createUserProfile = async (user) => {
   if (!user) return;
   const userRef = doc(db, 'users', user.uid);
   const userSnap = await getDoc(userRef);
+  const now = serverTimestamp();
   
   if (!userSnap.exists()) {
-    // 최초 로그인 시 유저 데이터 생성
     await setDoc(userRef, {
       uid: user.uid,
       displayName: user.displayName,
       email: user.email,
       photoURL: user.photoURL,
-      createdAt: serverTimestamp(),
-      lastLoginAt: serverTimestamp()
+      settings: { theme: 'dark', activeWorkId: null },
+      createdAt: now,
+      lastLoginAt: now
     });
   } else {
-    // 기존 유저는 접속 시간만 업데이트
-    await setDoc(userRef, {
-      lastLoginAt: serverTimestamp()
-    }, { merge: true });
+    await updateDoc(userRef, { lastLoginAt: now });
   }
 };
 
-// Projects: 기본 프로젝트 가져오기 (없으면 자동 생성)
+/** 유저 설정 업데이트 (activeWorkId, 테마 등) */
+export const updateUserSetting = async (userId, settings) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      settings: settings,
+      updatedAt: serverTimestamp()
+    });
+  } catch (e) {
+    console.error("[DB] User setting update failed:", e);
+  }
+};
+
+/** 유저 설정 가져오기 */
+export const getUserSettings = async (userId) => {
+  try {
+    const userSnap = await getDoc(doc(db, 'users', userId));
+    return userSnap.exists() ? userSnap.data().settings : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// ─── 작품 (Projects) ───────────────────────────────────────
+
+/** 작품 저장 (Create/Update) */
+export const saveProject = async (projectData, userId) => {
+  try {
+    const data = {
+      ...projectData,
+      userId,
+      updatedAt: serverTimestamp()
+    };
+    if (projectData.id && !projectData.id.startsWith('demo')) {
+      const ref = doc(db, "projects", projectData.id);
+      await updateDoc(ref, data);
+      return projectData.id;
+    } else {
+      const ref = collection(db, "projects");
+      const docRef = await addDoc(ref, { ...data, createdAt: serverTimestamp() });
+      return docRef.id;
+    }
+  } catch (e) {
+    console.error("[DB] Project save failed:", e);
+    throw e;
+  }
+};
+
+/** 작품 삭제 (Delete) - 연관 데이터는 클라이언트에서 별도 처리 권장 */
+export const deleteProject = async (projectId) => {
+  try {
+    await deleteDoc(doc(db, "projects", projectId));
+    return true;
+  } catch (e) {
+    console.error("[DB] Project delete failed:", e);
+    return false;
+  }
+};
+
+/** 기본 프로젝트 가져오기 */
 export const getDefaultProject = async (userId) => {
-  console.log(`[DB] getDefaultProject 호출됨. userId: ${userId}`);
   const q = query(
     collection(db, "projects"), 
     where("userId", "==", userId), 
-    where("isDefault", "==", true)
+    where("isDefault", "==", true),
+    limit(1)
   );
-  
-  console.log(`[DB] getDocs 쿼리 실행 시작...`);
-  const querySnapshot = await getDocs(q);
-  console.log(`[DB] getDocs 응답 받음. 결과 리스트 크기: ${querySnapshot.size}`);
-  
-  if (!querySnapshot.empty) {
-    console.log(`[DB] 기존 프로젝트 발견. ID: ${querySnapshot.docs[0].id}`);
-    return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
-  } else {
-    console.log(`[DB] 기존 프로젝트가 없습니다. '나의 첫 작품' 즉시 생성 로직 실행...`);
-    const docRef = await addDoc(collection(db, "projects"), {
-      userId: userId,
-      title: "나의 첫 작품",
-      description: "자동으로 생성된 첫 번째 웹소설 프로젝트입니다.",
-      genre: "판타지",
-      isDefault: true,
-      createdAt: serverTimestamp(),
+  const snap = await getDocs(q);
+  if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  return null;
+};
+
+// ─── 캐릭터 (Characters) ───────────────────────────────────
+
+/** 캐릭터 저장 */
+export const saveCharacter = async (charData, userId, projectId) => {
+  try {
+    const data = {
+      ...charData,
+      userId,
+      projectId,
+      status: charData.status || 'active',
       updatedAt: serverTimestamp()
-    });
-    console.log(`[DB] 새 프로젝트 생성 완료. ID: ${docRef.id}`);
-    return { id: docRef.id, userId, title: "나의 첫 작품", isDefault: true };
+    };
+    if (charData.id && !charData.id.startsWith('demo') && !charData.id.startsWith('local')) {
+      await updateDoc(doc(db, "characters", charData.id), data);
+      return charData.id;
+    } else {
+      const docRef = await addDoc(collection(db, "characters"), { ...data, createdAt: serverTimestamp() });
+      return docRef.id;
+    }
+  } catch (e) {
+    console.error("[DB] Character save failed:", e);
+    throw e;
   }
 };
 
-// Characters: 캐릭터 아카이브 (Soft Delete)
-export const archiveCharacter = async (charId) => {
+/** 캐릭터 삭제 */
+export const deleteCharacter = async (charId) => {
   try {
-    const charRef = doc(db, 'characters', charId);
-    await updateDoc(charRef, {
-      status: 'archived',
-      updatedAt: serverTimestamp()
-    });
+    await deleteDoc(doc(db, "characters", charId));
     return charId;
   } catch (e) {
-    console.error("캐릭터 아카이브 실패: ", e);
+    console.error("[DB] Character delete failed:", e);
     throw e;
   }
 };
 
-// Characters: 캐릭터 복구 (Restore)
-export const restoreCharacter = async (charId) => {
-  try {
-    const charRef = doc(db, 'characters', charId);
-    await updateDoc(charRef, {
-      status: 'active',
-      updatedAt: serverTimestamp()
-    });
-    return charId;
-  } catch (e) {
-    console.error("캐릭터 복구 실패: ", e);
-    throw e;
+/** 캐릭터 실시간 구독 */
+export const subscribeToCharacters = (userId, projectId, callback, statusFilter = null) => {
+  let q = query(
+    collection(db, "characters"),
+    where("userId", "==", userId),
+    where("projectId", "==", projectId)
+  );
+  if (statusFilter) {
+    q = query(q, where("status", "==", statusFilter));
   }
+  return onSnapshot(q, (snapshot) => {
+    const chars = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(chars);
+  });
 };
 
-// Timeline Events: 사건 저장
-export const saveTimelineEvent = async (eventData) => {
+// ─── 타임라인/챕터/복선 (Timeline Events) ─────────────────────
+
+/** 이벤트 저장 (Chapter/Thread) */
+export const saveTimelineEvent = async (eventData, userId, projectId) => {
   try {
-    const docRef = await addDoc(collection(db, "timeline_events"), {
+    const data = {
       ...eventData,
-      createdAt: serverTimestamp(),
+      userId,
+      projectId,
       updatedAt: serverTimestamp()
-    });
-    return docRef.id;
+    };
+    if (eventData.id && !eventData.id.startsWith('demo') && !eventData.id.startsWith('ch-') && !eventData.id.startsWith('th-')) {
+      await updateDoc(doc(db, "timeline_events", eventData.id), data);
+      return eventData.id;
+    } else {
+      const docRef = await addDoc(collection(db, "timeline_events"), { ...data, createdAt: serverTimestamp() });
+      return docRef.id;
+    }
   } catch (e) {
-    console.error("타임라인 사건 저장 실패: ", e);
+    console.error("[DB] Timeline event save failed:", e);
     throw e;
   }
 };
 
-// Timeline Events: 사건 수정
-export const updateTimelineEvent = async (eventId, eventData) => {
+/** 이벤트 삭제 */
+export const deleteTimelineEvent = async (eventId) => {
   try {
-    const eventRef = doc(db, 'timeline_events', eventId);
-    await updateDoc(eventRef, {
-      ...eventData,
-      updatedAt: serverTimestamp()
-    });
-    return eventId;
+    await deleteDoc(doc(db, "timeline_events", eventId));
+    return true;
   } catch (e) {
-    console.error("타임라인 사건 수정 실패: ", e);
-    throw e;
+    console.error("[DB] Timeline event delete failed:", e);
+    return false;
   }
 };
 
-// Timeline Events: 실시간 구독
+/** 이벤트 실시간 구독 */
 export const subscribeToTimelineEvents = (projectId, callback) => {
   const q = query(
     collection(db, "timeline_events"),
     where("projectId", "==", projectId)
   );
   return onSnapshot(q, (snapshot) => {
-    const events = [];
-    snapshot.forEach((doc) => {
-      events.push({ id: doc.id, ...doc.data() });
-    });
-    // 정렬 (order 기준)
+    const events = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     events.sort((a, b) => (a.order || 0) - (b.order || 0));
     callback(events);
   });
 };
 
-// Characters: 캐릭터 저장 (기본값 status: 'active')
-export const saveCharacter = async (characterData, userId, projectId) => {
+// ─── 통계 및 스프린트 (Stats & Sprints) ──────────────────────
+
+/** 집필 기록 저장 (오늘의 자수) */
+export const saveDailyStat = async (userId, count) => {
+  const today = new Date().toISOString().split('T')[0];
   try {
-    const docRef = await addDoc(collection(db, "characters"), {
-      userId,
-      projectId,
-      status: 'active',
-      ...characterData,
-      createdAt: serverTimestamp(),
+    const ref = doc(db, "users", userId, "stats", today);
+    await setDoc(ref, {
+      chars: count,
       updatedAt: serverTimestamp()
-    });
-    return docRef.id;
+    }, { merge: true });
   } catch (e) {
-    console.error("캐릭터 저장 실패: ", e);
-    throw e;
+    console.error("[DB] Daily stat save failed:", e);
   }
 };
 
-// Characters: 본인 캐릭터 실시간 구독 (상태 필터 추가 가능)
-export const subscribeToCharacters = (userId, callback, status = 'active') => {
-  const q = query(
-    collection(db, "characters"),
-    where("userId", "==", userId),
-    where("status", "==", status)
-  );
-  return onSnapshot(q, (snapshot) => {
-    const characters = [];
-    snapshot.forEach((doc) => {
-      characters.push({ id: doc.id, ...doc.data() });
+/** 스프린트 세션 저장 */
+export const saveSprintSession = async (userId, sprintData) => {
+  try {
+    const ref = collection(db, "users", userId, "sprints");
+    const docRef = await addDoc(ref, {
+      ...sprintData,
+      createdAt: serverTimestamp()
     });
-    callback(characters);
-  });
+    return docRef.id;
+  } catch (e) {
+    console.error("[DB] Sprint session save failed:", e);
+    return null;
+  }
 };

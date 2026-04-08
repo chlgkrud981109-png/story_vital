@@ -14,6 +14,7 @@
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
   import { firebaseConfig } from './firebase-config.js';
+  import * as DB from './src/firebase/db.js';
 
   let db, auth;
   try {
@@ -24,58 +25,32 @@
 
   window.addEventListener('load', () => {
     if (!auth) { window.loadDemoData(); return; }
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, user => {
       if (user) {
         window.currentUser = user;
-        loadChapters(user.uid);
-      } else {
-        window.loadDemoData();
-      }
+        const workId = localStorage.getItem('sv_activeWork') || 'default';
+        DB.subscribeToTimelineEvents(workId, events => {
+          appState.chapters = events.filter(e => e.type === 'chapter');
+          appState.threads = events.filter(e => e.type === 'thread');
+          if (!appState.selectedChapterId && appState.chapters.length) {
+            appState.selectedChapterId = appState.chapters[0].id;
+          }
+          renderAll();
+        });
+      } else { window.loadDemoData(); }
     });
   });
 
-  async function loadChapters(uid) {
-    try {
-      const workId = localStorage.getItem('sv_activeWork') || 'default';
-      const q = query(collection(db, 'timeline_events'), where('userId', '==', uid), where('projectId', '==', workId));
-      onSnapshot(q, (snap) => {
-        if (snap.empty) { window.loadDemoData(); return; }
-        const allEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.appState.chapters = allEvents.filter(e => e.type === 'chapter');
-        window.appState.threads = allEvents.filter(e => e.type === 'thread');
-        window.renderAll();
-      });
-    } catch(e) { window.loadDemoData(); }
-  }
-
-  window.saveChapterToDb = async function(chapter) {
-    if (!window.currentUser || !db) return;
+  window.saveChapterToDb = async (ch) => {
+    if (!window.currentUser) return;
     const workId = localStorage.getItem('sv_activeWork') || 'default';
-    const eventData = { ...chapter, type: 'chapter', userId: window.currentUser.uid, projectId: workId, updatedAt: new Date().toISOString() };
-    try {
-      if (chapter.id && !chapter.id.startsWith('demo')) {
-        await updateDoc(doc(db, 'timeline_events', chapter.id), eventData);
-      } else {
-        const ref = collection(db, 'timeline_events');
-        const docRef = await addDoc(ref, eventData);
-        chapter.id = docRef.id;
-      }
-    } catch(e) { console.error('Save failed:', e); }
+    await DB.saveTimelineEvent({ ...ch, type: 'chapter' }, window.currentUser.uid, workId);
   };
 
-  window.saveThreadToDb = async function(thread) {
-    if (!window.currentUser || !db) return;
+  window.saveThreadToDb = async (th) => {
+    if (!window.currentUser) return;
     const workId = localStorage.getItem('sv_activeWork') || 'default';
-    const eventData = { ...thread, type: 'thread', userId: window.currentUser.uid, projectId: workId, updatedAt: new Date().toISOString() };
-    try {
-      if (thread.id && !thread.id.startsWith('demo')) {
-        await updateDoc(doc(db, 'timeline_events', thread.id), eventData);
-      } else {
-        const ref = collection(db, 'timeline_events');
-        const docRef = await addDoc(ref, eventData);
-        thread.id = docRef.id;
-      }
-    } catch(e) {}
+    await DB.saveTimelineEvent({ ...th, type: 'thread' }, window.currentUser.uid, workId);
   };
 </script>
 
@@ -461,12 +436,15 @@
       const s = STATUS_MAP[ch.status] || STATUS_MAP.draft;
       const isActive = ch.id === appState.selectedChapterId;
       return `<div onclick="selectChapter('${ch.id}')"
-        class="chapter-item px-4 py-3 cursor-pointer ${isActive ? 'chapter-active' : ''} rounded-lg mx-2 mb-1">
+        class="chapter-item px-4 py-3 cursor-pointer ${isActive ? 'chapter-active' : ''} rounded-lg mx-2 mb-1 group relative">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-on-surface-variant">${String(ch.num).padStart(2,'0')}화</span>
-          <span class="text-xs px-2 py-0.5 rounded-full ${s.cls} ${s.bg}" style="border-width:1px;border-style:solid">${s.label}</span>
+          <div class="flex items-center gap-1">
+            <span class="text-xs px-2 py-0.5 rounded-full ${s.cls} ${s.bg}" style="border-width:1px;border-style:solid">${s.label}</span>
+            <button onclick="event.stopPropagation();window.deleteChapter('${ch.id}')" class="mat-icon text-base text-outline hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">delete</button>
+          </div>
         </div>
-        <p class="text-sm font-semibold text-on-surface mt-0.5 truncate">${ch.title}</p>
+        <p class="text-sm font-semibold text-on-surface mt-0.5 truncate pr-6">${ch.title}</p>
       </div>`;
     }).join('');
   }
@@ -503,7 +481,7 @@
   function threadCard(t, compact = false) {
     const statusCls = { planted: 's-planted', developing: 's-developing', resolved: 's-resolved' };
     const statusLabel = { planted: '투척됨', developing: '전개 중', resolved: '회수됨' };
-    return `<div id="thread-${t.id}" class="thread-card glass rounded-xl p-3" draggable="true"
+    return `<div id="thread-${t.id}" class="thread-card glass rounded-xl p-3 group relative" draggable="true"
       ondragstart="onDragStart(event, '${t.id}')">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
@@ -514,7 +492,10 @@
           <p class="text-sm font-semibold text-on-surface">${t.title}</p>
           ${t.desc && !compact ? `<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">${t.desc}</p>` : ''}
         </div>
-        <button onclick="cycleThreadStatus('${t.id}')" class="mat-icon text-outline hover:text-on-surface transition-colors text-base shrink-0">sync</button>
+        <div class="flex flex-col gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-all">
+          <button onclick="cycleThreadStatus('${t.id}')" class="mat-icon text-outline hover:text-on-surface text-base">sync</button>
+          <button onclick="window.deleteThread('${t.id}')" class="mat-icon text-outline hover:text-red-400 text-base">delete</button>
+        </div>
       </div>
     </div>`;
   }
@@ -598,8 +579,24 @@
     const t = appState.threads.find(t => t.id === id);
     if (!t) return;
     const cycle = ['planted','developing','resolved'];
-    t.status = cycle[(cycle.indexOf(t.status) + 1) % cycle.length];
+    const idx = cycle.indexOf(t.status);
+    t.status = cycle[(idx + 1) % cycle.length];
     window.saveThreadToDb && window.saveThreadToDb(t);
+    renderAll();
+  };
+
+  window.deleteChapter = async function(id) {
+    if (!confirm('회차를 삭제하시겠습니까? 관련 복선 데이터는 유지되지만 회차 연결이 끊어질 수 있습니다.')) return;
+    await DB.deleteTimelineEvent(id);
+    appState.chapters = appState.chapters.filter(c => c.id !== id);
+    if (appState.selectedChapterId === id) appState.selectedChapterId = appState.chapters[0]?.id || null;
+    renderAll();
+  };
+
+  window.deleteThread = async function(id) {
+    if (!confirm('복선을 삭제하시겠습니까?')) return;
+    await DB.deleteTimelineEvent(id);
+    appState.threads = appState.threads.filter(t => t.id !== id);
     renderAll();
   };
 

@@ -14,6 +14,7 @@
   import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
   import { firebaseConfig } from './firebase-config.js';
+  import * as DB from './src/firebase/db.js';
 
   let app, db, auth;
   let isAuthLoading = true; // 인증 로딩 상태 초기화
@@ -108,22 +109,27 @@
 
   async function loadUserData(uid) {
     try {
-      // Load works (projects)
+      // 1. 유저 설정 가져오기 (기기 간 동기화)
+      const settings = await DB.getUserSettings(uid);
+      if (settings && settings.activeWorkId) {
+        window.appData.activeWorkId = settings.activeWorkId;
+      }
+
+      // 2. 작품(프로젝트) 로드
       const q = query(collection(db, 'projects'), where('userId', '==', uid));
       const worksSnap = await getDocs(q);
       const works = worksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      window.appData.works = works;
 
-      // Load today's writing stat
+      // 3. 오늘 집필 통계
       const today = new Date().toISOString().split('T')[0];
       const statDoc = await getDoc(doc(db, 'users', uid, 'stats', today));
       const todayStat = statDoc.exists() ? statDoc.data() : { chars: 0 };
+      window.appData.todayChars = todayStat.chars || 0;
 
-      // Load streak
+      // 4. 전체 기록 (스트릭용)
       const statsSnap = await getDocs(collection(db, 'users', uid, 'stats'));
       const allStats = statsSnap.docs.map(d => ({ date: d.id, ...d.data() }));
-
-      window.appData.works = works;
-      window.appData.todayChars = todayStat.chars || 0;
       window.appData.allStats = allStats;
 
       if (!works.length) {
@@ -133,7 +139,7 @@
         renderDashboard();
       }
 
-      // Load threads for unresolved count
+      // 5. 복선 카운트
       if (window.appData.activeWorkId) {
         const qThreads = query(collection(db, 'timeline_events'), where('userId', '==', uid), where('projectId', '==', window.appData.activeWorkId), where('type', '==', 'thread'));
         const threadsSnap = await getDocs(qThreads);
@@ -141,25 +147,31 @@
         window.appData.threads = threads;
         renderUnresolved();
       }
-    } catch(e) { loadDemoMode(); }
+    } catch(e) { 
+      console.error("[Data] Load error:", e);
+      loadDemoMode(); 
+    }
   }
 
   window.saveWork = async function(work) {
     if (!window.currentUser || !db) return null;
-    try {
-      const workData = { ...work, userId: window.currentUser.uid, createdAt: new Date().toISOString() };
-      const ref = collection(db, 'projects');
-      const docRef = await addDoc(ref, workData);
-      return docRef.id;
-    } catch(e) { return null; }
+    return await DB.saveProject(work, window.currentUser.uid);
   };
 
   window.recordWriting = async function(chars) {
     if (!window.currentUser || !db) return;
-    const today = new Date().toISOString().split('T')[0];
-    try {
-      await setDoc(doc(db, 'users', window.currentUser.uid, 'stats', today), { chars, updatedAt: new Date().toISOString() }, { merge: true });
-    } catch(e) {}
+    await DB.saveDailyStat(window.currentUser.uid, chars);
+  };
+
+  window.deleteWork = async function(id, event) {
+    if (event) event.stopPropagation();
+    if (!confirm('잠깐! 작품을 삭제하시겠습니까? 관련 캐릭터와 챕터 데이터는 유지되지만 대시보드에서 보이지 않게 됩니다.')) return;
+    const success = await DB.deleteProject(id);
+    if (success) {
+      window.appData.works = window.appData.works.filter(w => w.id !== id);
+      if (window.appData.activeWorkId === id) window.appData.activeWorkId = window.appData.works[0]?.id || null;
+      renderDashboard();
+    }
   };
 
   window.db = db;
@@ -881,13 +893,16 @@ function renderWorksGrid() {
   const STATUS_BADGE = { writing:'badge-writing', plan:'badge-plan', hiatus:'badge-done', done:'badge-done' };
   
   grid.innerHTML = appData.works.map(w => `
-    <div class="work-card glass-bright card-glow" onclick="switchWork('${w.id}')">
+    <div class="work-card glass-bright card-glow relative group" onclick="switchWork('${w.id}')">
       <div class="p-4">
         <div class="flex items-start justify-between mb-3">
           <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:${w.color}20;border:1px solid ${w.color}30">
             <span class="mat-icon text-lg" style="color:${w.color}">auto_stories</span>
           </div>
-          <span class="badge ${STATUS_BADGE[w.status]||'badge-draft'}">${STATUS_LABEL[w.status]||'-'}</span>
+          <div class="flex items-center gap-1">
+            <span class="badge ${STATUS_BADGE[w.status]||'badge-draft'}">${STATUS_LABEL[w.status]||'-'}</span>
+            <button onclick="window.deleteWork('${w.id}', event)" class="mat-icon text-base text-outline hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-1">delete</button>
+          </div>
         </div>
         <h3 class="font-display font-bold text-white text-sm mb-0.5 truncate">${w.title}</h3>
         <p class="text-xs mb-3" style="color:#9e9aaa">${w.genre||''}</p>
@@ -980,9 +995,16 @@ function renderStats() {
 }
 
 // ─── Actions ──────────────────────────────
-window.switchWork = function(id) {
+window.switchWork = async function(id) {
   appData.activeWorkId = id;
   localStorage.setItem('sv_activeWork', id);
+  
+  // 기기 간 동기화를 위해 Firestore 업데이트 (비동기 처리)
+  if (window.currentUser) {
+    const settings = { activeWorkId: id };
+    DB.updateUserSetting(window.currentUser.uid, settings);
+  }
+
   renderWorkSwitcher();
   renderWorksGrid();
   closeWorkDropdown();
@@ -1149,6 +1171,24 @@ window.toggleSprint = function() {
       if (sprintLeft <= 0) {
         sprintLeft = 0; clearInterval(sprintInterval); sprintRunning = false;
         btn.textContent = '완료!';
+        
+        // 스프린트 완료 후 데이터 저장 (지체 없이 유도)
+        const earned = prompt("수고하셨습니다! 이번 세션에서 몇 자를 쓰셨나요?", "0");
+        if (earned !== null) {
+          const chars = parseInt(earned) || 0;
+          if (window.currentUser) {
+            DB.saveSprintSession(window.currentUser.uid, {
+              duration: sprintTotal,
+              achievedWords: chars,
+              projectId: appData.activeWorkId,
+              date: new Date().toISOString()
+            });
+            // 일일 통계에도 합산 반영
+            window.recordWriting(appData.todayChars + chars);
+            updateTodayChars(appData.todayChars + chars);
+          }
+          addActivity(`스프린트 완료: +${chars.toLocaleString()}자`, 'timer');
+        }
       }
       updateSprintDisplay();
     }, 1000);

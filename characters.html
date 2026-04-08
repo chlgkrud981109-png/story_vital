@@ -13,6 +13,7 @@
   import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
   import { firebaseConfig } from './firebase-config.js';
+  import * as DB from './src/firebase/db.js';
 
   let db, auth;
   try {
@@ -39,22 +40,12 @@
   window.saveCharDb = async (char) => {
     if (!window.currentUser || !db) return null;
     const workId = localStorage.getItem('sv_activeWork') || 'default';
-    const charData = { ...char, userId: window.currentUser.uid, projectId: workId, updatedAt: new Date().toISOString() };
-    try {
-      if (char.id && !char.id.startsWith('demo') && !char.id.startsWith('local')) {
-        await updateDoc(doc(db, 'characters', char.id), charData);
-        return char.id;
-      } else {
-        const ref = collection(db, 'characters');
-        const docRef = await addDoc(ref, charData);
-        return docRef.id;
-      }
-    } catch(e) { console.error('Save error:', e); return null; }
+    return await DB.saveCharacter(char, window.currentUser.uid, workId);
   };
 
   window.deleteCharDb = async (id) => {
     if (!window.currentUser || !db) return;
-    try { await deleteDoc(doc(db, 'characters', id)); } catch(e) {}
+    await DB.deleteCharacter(id);
   };
 </script>
 
@@ -441,10 +432,10 @@ window.applyRender = function() {
         <div class="flex items-start gap-3 mb-3">
           <div class="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-base flex-shrink-0"
             style="background:${c.color};box-shadow:0 0 16px ${c.color}40">${c.name[0]}</div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between gap-1">
-              <h3 class="font-display font-bold text-white text-sm truncate">${highlight(c.name, q)}</h3>
-              <button onclick="event.stopPropagation();openFormDrawer('${c.id}')" class="mat-icon text-base flex-shrink-0 nav-link">edit</button>
+              <div class="flex items-center gap-0.5 flex-shrink-0">
+                <button onclick="event.stopPropagation();openFormDrawer('${c.id}')" class="mat-icon text-base nav-link p-1">edit</button>
+                <button onclick="event.stopPropagation();window.deleteCharCard('${c.id}')" class="mat-icon text-base text-outline hover:text-red-400 p-1">delete</button>
+              </div>
             </div>
             <p class="text-xs mt-0.5" style="color:#9e9aaa">${c.role} ${c.firstChap?'· '+c.firstChap:''}</p>
           </div>
@@ -680,12 +671,19 @@ window.saveChar = async function() {
   applyRender();
 };
 
-window.deleteChar = async function() {
-  const id = document.getElementById('edit-id').value;
-  if (!id) return;
-  if (!confirm('이 캐릭터를 삭제할까요?')) return;
-  if (window.deleteCharDb) await window.deleteCharDb(id);
+window.deleteCharCard = async function(id) {
+  if (!confirm('캐릭터를 삭제하시겠습니까?')) return;
+  await deleteCharDb(id);
+  if (state.selectedId === id) closeDetail();
   window.appChars = window.appChars.filter(c => c.id !== id);
+  applyRender();
+};
+
+window.deleteChar = async function() {
+  if (!state.editId) return;
+  if (!confirm('캐릭터를 삭제하시겠습니까?')) return;
+  await deleteCharDb(state.editId);
+  window.appChars = window.appChars.filter(c => c.id !== state.editId);
   closeFormDrawer();
   applyRender();
 };
