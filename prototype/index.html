@@ -101,10 +101,10 @@
         <div>
           <label class="fl-label">주요 플랫폼</label>
           <div style="display:flex;flex-wrap:wrap;gap:6px" id="ob-plats">
-            <button onclick="togglePill(this)" class="plat-pill">📗 문피아</button>
-            <button onclick="togglePill(this)" class="plat-pill">💚 네이버 시리즈</button>
-            <button onclick="togglePill(this)" class="plat-pill">🟡 카카오페이지</button>
-            <button onclick="togglePill(this)" class="plat-pill">📘 조아라</button>
+            <button onclick="togglePill(this)" class="plat-pill">문피아</button>
+            <button onclick="togglePill(this)" class="plat-pill">네이버 시리즈</button>
+            <button onclick="togglePill(this)" class="plat-pill">카카오페이지</button>
+            <button onclick="togglePill(this)" class="plat-pill">조아라</button>
           </div>
         </div>
         <div><label class="fl-label">일일 목표 (자)</label><input id="ob-goal" type="number" class="field" placeholder="5000"/></div>
@@ -144,6 +144,14 @@
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
+      <!-- Sprint indicator (진행 중일 때만 표시) -->
+      <style>@keyframes spPulse{0%,100%{opacity:1}50%{opacity:0.45}}</style>
+      <button id="nav-sprint" onclick="openSpM()" title="집필 스프린트 진행 중 — 클릭해서 크게 보기"
+        style="display:none;align-items:center;gap:6px;background:rgba(123,79,255,0.16);border:1px solid rgba(123,79,255,0.4);border-radius:20px;padding:5px 12px;cursor:pointer">
+        <span class="icon icon-sm" id="nav-sprint-ic" style="color:var(--primary);font-size:15px">timer</span>
+        <span style="font-size:11px;color:var(--t3)" class="hide-m">스프린트</span>
+        <span id="nav-sprint-time" style="font-size:12px;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums">25:00</span>
+      </button>
       <!-- Work switcher -->
       <div style="position:relative" id="wsw">
         <div class="ws-btn" onclick="toggleWD()">
@@ -207,7 +215,7 @@
   </div>
 
   <!-- MAIN -->
-  <main class="main" style="padding:24px 28px;max-width:1200px">
+  <main class="main" style="padding:84px 28px 24px;max-width:1200px">
 
     <!-- Welcome banner -->
     <section style="border-radius:var(--r-xl);background:var(--s3);border:1px solid var(--b1);padding:24px 28px;margin-bottom:18px;position:relative;overflow:hidden" class="anim-fade-up">
@@ -255,13 +263,16 @@
     <!-- Streak calendar -->
     <section style="border-radius:var(--r-xl);background:var(--s3);border:1px solid var(--b1);padding:18px 24px;margin-bottom:18px" class="anim-fade-up d1">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="display:flex;align-items:center;gap:8px"><span class="icon icon-sm" style="color:var(--primary)">local_fire_department</span><span style="font-size:14px;font-weight:700;color:#fff">기록 스트릭</span><span style="font-size:11px;color:var(--t3)">· 최근 10주 · 캐릭터·회차·복선·집필량, 무엇이든 기록한 날이 채워집니다</span></div>
-        <div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--t3)">
-          <span style="display:flex;align-items:center;gap:4px"><span class="streak-cell"></span>기록 없음</span>
-          <span style="display:flex;align-items:center;gap:4px"><span class="streak-cell" data-level="3"></span>기록한 날</span>
-        </div>
+        <div style="display:flex;align-items:center;gap:8px"><span class="icon icon-sm" style="color:var(--primary)">local_fire_department</span><span style="font-size:14px;font-weight:700;color:#fff">이번 주 기록 도장</span></div>
+        <span style="font-size:11px;color:var(--t3)">캐릭터·회차·복선… 무엇이든 기록한 날엔 도장이 찍혀요</span>
       </div>
-      <div id="scal" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px"></div>
+      <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-bottom:14px">
+        <div style="text-align:center;min-width:96px;padding:10px 14px;border-radius:var(--r-lg);background:rgba(123,79,255,0.08);border:1px solid rgba(123,79,255,0.18)">
+          <div style="font-size:30px;font-weight:800;color:#fff;line-height:1.1"><span id="snum2">0</span>일</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px">연속 기록 중 🔥</div>
+        </div>
+        <div id="week-days" style="flex:1;display:flex;gap:6px;justify-content:space-between;max-width:430px;min-width:270px"></div>
+      </div>
       <div style="display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--b2)">
         <span class="icon icon-sm" style="color:var(--t3)">edit_note</span>
         <span style="font-size:13px;color:var(--t3)">오늘 집필량</span>
@@ -412,7 +423,7 @@ window.doLocalLogin=()=>{
 
 // 부트: 로컬 프로필이 있으면 즉시 대시보드 (로그인 화면으로 튀기지 않음)
 let appBooted=false;
-{ const bu=localUser(); if(bu){ appBooted=true; loadLocalApp(bu); } }
+{ const bu=localUser(); if(bu && bu.provider!=='google'){ appBooted=true; loadLocalApp(bu); } }
 // Firebase 미연동이면 Google 버튼에 표시
 if(!FB || !FB.isConfigured){ const g=document.getElementById('gbtn'); if(g){ g.style.opacity='0.55'; g.title='Firebase 연동 후 사용 가능 (docs/FIREBASE_SETUP.md)'; } }
 if((!FB || !FB.isConfigured) && !appBooted){ showAuth(); }
@@ -420,6 +431,8 @@ if((!FB || !FB.isConfigured) && !appBooted){ showAuth(); }
 if (FB && FB.isConfigured) try { FB.onAuth(async user => {
   if (user) {
     S.uid = user.uid; S.user = user;
+    // 페이지 가드(sv_user 확인) 통과용 마커 — 구글 로그인도 로그인 상태로 인식
+    localStorage.setItem('sv_user', JSON.stringify({ name: user.displayName || '작가', provider: 'google' }));
     try {
       const [works, sub, profile] = await Promise.all([FB.getWorks(user.uid), FB.getSubscription(user.uid), FB.getProfile(user.uid)]);
       S.works = works; S.sub = sub;
@@ -434,9 +447,9 @@ if (FB && FB.isConfigured) try { FB.onAuth(async user => {
       S.todayChars = td?.chars||0;
       document.getElementById('tci').value = S.todayChars||'';
       showApp(user);
-    } catch(e) { console.warn('Firebase error:',e.message); if(!appBooted){const u=localUser(); u?loadLocalApp(u):showAuth();} }
+    } catch(e) { console.warn('Firebase error:',e.message); if(!appBooted){const u=localUser(); (u&&u.provider!=='google')?loadLocalApp(u):showAuth();} }
   } else if (!appBooted) { showAuth(); }
-}); } catch(e) { console.warn('Auth 구독 실패:', e.message); if(!appBooted){ const u=localUser(); u?loadLocalApp(u):showAuth(); } }
+}); } catch(e) { console.warn('Auth 구독 실패:', e.message); if(!appBooted){ const u=localUser(); (u&&u.provider!=='google')?loadLocalApp(u):showAuth(); } }
 
 window.doGoogleSignIn = async()=>{
   if(!FB){ toast('Firebase \ubaa8\ub4c8\uc744 \ubd88\ub7ec\uc62c \uc218 \uc5c6\uc5b4\uc694. \ub85c\uceec \uc11c\ubc84(http)\ub85c \uc2e4\ud589\ud574\uc57c \ud569\ub2c8\ub2e4 \u2014 docs/FIREBASE_SETUP.md \ucc38\uace0','error'); return; }
@@ -487,26 +500,33 @@ function renderTP(){
   const p=document.getElementById('tpanel');
   const ut=S.threads.filter(t=>t.status!=='resolved');
   document.getElementById('unum').textContent=ut.length; document.getElementById('tbadge').textContent=ut.length+'개';
-  if(!ut.length){p.innerHTML='<div style="text-align:center;padding:18px;color:var(--t3);font-size:12px"><span class="icon icon-lg" style="display:block;margin-bottom:4px;color:var(--success)">check_circle</span>미회수 복선 없음 🎉</div>';return;}
+  if(!ut.length){p.innerHTML='<div style="text-align:center;padding:18px;color:var(--t3);font-size:12px"><span class="icon icon-lg" style="display:block;margin-bottom:4px;color:var(--success)">check_circle</span>미회수 복선 없음</div>';return;}
   p.innerHTML=ut.slice(0,5).map(t=>`<div class="ta" onclick="location.href='chapters.html'"><div class="ta-dot"></div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${t.title}</div><div style="font-size:10px;color:var(--t3)">${t.chapterNum?t.chapterNum+'화':''}${t.daysAgo?' · D+'+t.daysAgo:''}</div></div><span class="badge ${t.status==='planted'?'badge-pink':'badge-purple'}" style="flex-shrink:0">${t.status==='planted'?'투척됨':'전개중'}</span></div>`).join('');
 }
 function renderSC(){
-  // 기록 스트릭: 캐릭터·회차·복선·집필량 등 무엇이든 기록한 날 기준
-  const cal=document.getElementById('scal');
+  // 이번 주 기록 도장: 무엇이든 기록한 날 도장 + 연속 일수
   const days=readJ('sv_record_days',{});
   const stats=readJ('sv_stats',{});
+  const names=['일','월','화','수','목','금','토'];
   const today=new Date(); const cells=[];
-  for(let i=69;i>=0;i--){
+  for(let i=6;i>=0;i--){
     const d=new Date(today);d.setDate(d.getDate()-i);
     const ds=ldate(d); const isT=i===0;
     const rec=!!days[ds]; const chars=stats[ds]?.chars||0;
-    cells.push(`<div class="streak-cell${isT?' today':''}" data-level="${rec?3:0}" title="${ds}${rec?(chars?' · '+chars.toLocaleString()+'자 집필':' · 기록함'):' · 기록 없음'}"></div>`);
+    cells.push(`<div style="text-align:center;flex:1" title="${ds}${rec?(chars?' · '+chars.toLocaleString()+'자 집필':' · 기록함'):' · 기록 없음'}">
+      <div style="font-size:10px;font-weight:${isT?'800':'500'};color:${isT?'var(--primary)':'var(--t4)'};margin-bottom:6px">${isT?'오늘':names[d.getDay()]}</div>
+      <div style="width:36px;height:36px;margin:0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;${rec?'background:linear-gradient(135deg,#7b4fff,#b89eff);box-shadow:0 0 10px rgba(123,79,255,0.35)':'background:rgba(255,255,255,0.03);border:1.5px dashed var(--b1)'}">
+        ${rec?'<span class="icon" style="font-size:17px;color:#fff">check</span>':''}
+      </div>
+    </div>`);
   }
-  cal.innerHTML=cells.join('');
+  const wd=document.getElementById('week-days'); if(wd)wd.innerHTML=cells.join('');
   let streak=0; const d=new Date(today);
-  if(!days[ldate(d)]) d.setDate(d.getDate()-1); // 오늘 아직 기록 전이면 어제까지의 연속 표시
+  if(!days[ldate(d)]) d.setDate(d.getDate()-1); // 오늘 아직 기록 전이면 어제까지 연속 표시
   while(days[ldate(d)]){streak++;d.setDate(d.getDate()-1);}
-  S.streak=streak; document.getElementById('snum').textContent=streak;
+  S.streak=streak;
+  document.getElementById('snum').textContent=streak;
+  const s2=document.getElementById('snum2'); if(s2)s2.textContent=streak;
 }
 function renderStats(){
   const g=S.dailyGoal; const w=S.todayChars; const p=Math.min(100,Math.round(w/g*100));
@@ -623,11 +643,18 @@ window.closeMD=()=>{document.getElementById('mdd').style.left='-280px';document.
 // Sprint
 let sT=25*60,sL=25*60,sR=false,sI;
 window.openSpM=()=>document.getElementById('spm').classList.add('open');
-window.closeSp=()=>{document.getElementById('spm').classList.remove('open');if(sR){clearInterval(sI);sR=false;upSpB();}};
+window.closeSp=()=>{document.getElementById('spm').classList.remove('open');updNavSprint();}; // 모달을 닫아도 타이머는 계속 — 네비에서 확인
 window.setSD=(m)=>{if(sR)return;sT=sL=m*60;['15','25','50'].forEach(x=>{const b=document.getElementById('sp'+x);if(x==m){b.className='btn btn-secondary btn-sm';b.style.flex='1';b.style.borderColor='rgba(123,79,255,0.4)';}else{b.className='btn btn-ghost btn-sm';b.style.flex='1';b.style.borderColor='';}});upSpD();};
-window.toggleSp=()=>{if(sR){clearInterval(sI);sR=false;}else{sR=true;sI=setInterval(()=>{sL--;if(sL<=0){sL=0;clearInterval(sI);sR=false;toast('스프린트 완료! 수고하셨어요 🎉','success');logAct('집필 스프린트 완료','var(--warning)');}upSpD();},1000);}upSpB();};
-function upSpD(){const m=Math.floor(sL/60).toString().padStart(2,'0');const s=(sL%60).toString().padStart(2,'0');document.getElementById('sptime').textContent=m+':'+s;document.getElementById('spring').style.strokeDashoffset=276.5*(sL/sT);}
+window.toggleSp=()=>{if(sR){clearInterval(sI);sR=false;}else{sR=true;sI=setInterval(()=>{sL--;if(sL<=0){sL=0;clearInterval(sI);sR=false;toast('스프린트 완료! 수고하셨어요 🎉','success');logAct('집필 스프린트 완료','var(--warning)');markRecordDay();renderSC();updNavSprint();}upSpD();},1000);}upSpB();updNavSprint();};
+function upSpD(){const m=Math.floor(sL/60).toString().padStart(2,'0');const s=(sL%60).toString().padStart(2,'0');document.getElementById('sptime').textContent=m+':'+s;document.getElementById('spring').style.strokeDashoffset=276.5*(sL/sT);const nt=document.getElementById('nav-sprint-time');if(nt)nt.textContent=m+':'+s;}
 function upSpB(){document.getElementById('spbtn').textContent=sR?'일시정지':(sL<sT?'계속':'시작');}
+function updNavSprint(){
+  const el=document.getElementById('nav-sprint'); if(!el)return;
+  const active = sR || (sL<sT && sL>0);
+  el.style.display = active ? 'flex' : 'none';
+  const ic=document.getElementById('nav-sprint-ic');
+  if(ic) ic.style.animation = sR ? 'spPulse 1.6s ease-in-out infinite' : '';
+}
 
 // Toast
 window.toast=(msg,type='info')=>{const ic={success:'check_circle',error:'error',info:'info'};const c=document.getElementById('toast-container');const el=document.createElement('div');el.className='toast toast-'+type;el.innerHTML=`<span class="icon icon-sm">${ic[type]}</span>${msg}`;c.appendChild(el);setTimeout(()=>el.remove(),3500);};

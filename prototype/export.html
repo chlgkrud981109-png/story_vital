@@ -134,7 +134,7 @@ textarea.inp{font-family:'Noto Serif KR',serif;line-height:1.85;resize:none}
       <span class="mat-icon" style="color:#b8a2ff">upload_file</span>
       플랫폼 맞춤 내보내기
     </h1>
-    <p class="text-sm" style="color:#9e9aaa">원고를 붙여넣으면 플랫폼별 형식으로 즉시 변환합니다</p>
+    <p class="text-sm" style="color:#9e9aaa">소설·웹툰 스크립트·시나리오 등 어떤 원고든, 연재 플랫폼 형식에 맞게 즉시 변환합니다</p>
   </div>
 
   <!-- PLATFORM PRESETS - saved settings -->
@@ -387,6 +387,28 @@ textarea.inp{font-family:'Noto Serif KR',serif;line-height:1.85;resize:none}
   </div>
 </main>
 
+<!-- PLATFORM MODAL -->
+<div id="plat-modal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closePlatModal()">
+  <div class="glass-bright rounded-2xl p-6 w-full" style="max-width:380px">
+    <h2 class="font-display font-bold text-white text-base mb-4" id="plat-modal-title">플랫폼 추가</h2>
+    <input type="hidden" id="plat-edit-id"/>
+    <div class="space-y-3">
+      <div><label class="text-xs uppercase tracking-wider block mb-1.5" style="color:#5e5b68">플랫폼 이름 *</label><input id="pm-name" class="inp" placeholder="예: 포스타입, 브런치, 개인 블로그..."/></div>
+      <div><label class="text-xs uppercase tracking-wider block mb-1.5" style="color:#5e5b68">설명</label><input id="pm-desc" class="inp" placeholder="예: 1줄 · 에세이용"/></div>
+      <div class="flex items-center justify-between"><span class="text-sm text-white">문단 사이 빈 줄</span><input id="pm-gap" type="number" min="0" max="4" value="1" class="inp" style="width:72px"/></div>
+      <div class="flex items-center gap-4 text-sm text-white flex-wrap">
+        <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="pm-indent" style="accent-color:#7c50ff"/>들여쓰기</label>
+        <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="pm-header" checked style="accent-color:#7c50ff"/>회차 헤더</label>
+        <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="pm-mobile" style="accent-color:#7c50ff"/>모바일 공백</label>
+      </div>
+    </div>
+    <div class="flex gap-2 mt-5">
+      <button onclick="closePlatModal()" class="flex-1 rounded-xl py-2.5 text-sm" style="border:1px solid rgba(184,162,255,0.15);color:#9e9aaa">취소</button>
+      <button onclick="savePlatModal()" class="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white" style="background:#7c50ff">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- MOBILE NAV -->
 <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-[90] h-16 flex items-center justify-around" style="background:rgba(9,9,13,0.95);border-top:1px solid rgba(184,162,255,0.08)">
   <a href="index.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">dashboard</span><span style="font-size:10px">홈</span></a>
@@ -398,13 +420,21 @@ textarea.inp{font-family:'Noto Serif KR',serif;line-height:1.85;resize:none}
 
 <script>
 // ─── Platform config ──────────────────────────────
-const PLATFORMS = {
-  munpia:   { emoji:'📗', name:'문피아', shortDesc:'2줄 · 모바일 최적', gap:2, indent:false, header:true, mobile:false, tips:['첫 문장이 독자 유입의 80%를 결정합니다. 강렬하게 시작하세요.','회차당 5,000~8,000자가 독자 만족도 최상위 구간입니다.','클리프행어로 마무리 시 다음 화 조회수 평균 28% 상승.','리뷰에 답글을 달면 독자 이탈률이 크게 줄어듭니다.'] },
-  naver:    { emoji:'💚', name:'네이버 시리즈', shortDesc:'1줄 · 짧고 빠른 호흡', gap:1, indent:false, header:true, mobile:false, tips:['네이버 시리즈는 3,000~5,000자 짧은 호흡을 선호합니다.','댓글/좋아요 응답률이 독자 리텐션에 직접 영향 줍니다.','연재 요일 고정 시 독자 방문 패턴이 형성됩니다.','첫 10화 무료 공개가 전환율을 높이는 황금 공식입니다.'] },
-  kakao:    { emoji:'🟡', name:'카카오페이지', shortDesc:'2줄 + 들여쓰기 · 유료화 최적', gap:2, indent:true, header:true, mobile:true, tips:['카카오페이지 독자는 빠른 전개와 감정 폭발을 선호합니다.','기다리면 무료 시스템 고려 시 매일 업데이트가 권장됩니다.','회차당 8,000~12,000자가 결제 전환율을 높입니다.','주인공 고통→성장 사이클이 별점 상승에 효과적입니다.'] },
-  joara:    { emoji:'📘', name:'조아라', shortDesc:'1줄 · 장르 커뮤니티 중심', gap:1, indent:false, header:true, mobile:false, tips:['조아라 커뮤니티는 독자-작가 소통을 중요시합니다.','시리즈 누적 분량이 검색 노출 순위에 영향을 줍니다.','연재 스케줄 공지가 이탈률을 크게 낮춥니다.','장르 특화 해시태그 활용으로 신규 독자를 유입할 수 있습니다.'] },
-  munpiapc: { emoji:'🖥️', name:'문피아 PC', shortDesc:'넓은 뷰어 · 긴 문단', gap:1, indent:false, header:true, mobile:false, tips:['PC 뷰어는 긴 문단도 읽기 편합니다.','한 문단 최대 6~8줄이 PC 환경에 적합합니다.','대화문 앞 화자 표시 습관이 PC 독자에게 친절합니다.','중간 소제목 활용으로 긴 회차 가독성을 높일 수 있습니다.'] },
-};
+// ─── 플랫폼 목록: 기본 4종 + 사용자 추가(수정/삭제 가능, 추가 최대 5개·Pro 기능) ───
+const DEFAULT_PLATFORMS = [
+  { id:'munpia', name:'문피아', desc:'2줄 · 모바일 최적', gap:2, indent:false, header:true, mobile:false, tips:['첫 문장이 독자 유입의 80%를 결정합니다. 강렬하게 시작하세요.','회차당 5,000~8,000자가 독자 만족도 최상위 구간입니다.','클리프행어로 마무리 시 다음 화 조회수 평균 28% 상승.','리뷰에 답글을 달면 독자 이탈률이 크게 줄어듭니다.'] },
+  { id:'naver', name:'네이버 시리즈', desc:'1줄 · 짧고 빠른 호흡', gap:1, indent:false, header:true, mobile:false, tips:['네이버 시리즈는 3,000~5,000자 짧은 호흡을 선호합니다.','댓글/좋아요 응답률이 독자 리텐션에 직접 영향 줍니다.','연재 요일 고정 시 독자 방문 패턴이 형성됩니다.','첫 10화 무료 공개가 전환율을 높이는 황금 공식입니다.'] },
+  { id:'kakao', name:'카카오페이지', desc:'2줄 + 들여쓰기 · 유료화 최적', gap:2, indent:true, header:true, mobile:true, tips:['카카오페이지 독자는 빠른 전개와 감정 폭발을 선호합니다.','기다리면 무료 시스템 고려 시 매일 업데이트가 권장됩니다.','회차당 8,000~12,000자가 결제 전환율을 높입니다.','주인공 고통→성장 사이클이 별점 상승에 효과적입니다.'] },
+  { id:'joara', name:'조아라', desc:'1줄 · 장르 커뮤니티 중심', gap:1, indent:false, header:true, mobile:false, tips:['조아라 커뮤니티는 독자-작가 소통을 중요시합니다.','시리즈 누적 분량이 검색 노출 순위에 영향을 줍니다.','연재 스케줄 공지가 이탈률을 크게 낮춥니다.','장르 특화 해시태그 활용으로 신규 독자를 유입할 수 있습니다.'] },
+];
+const MAX_CUSTOM = 5;
+let platforms = (() => {
+  try { const v = JSON.parse(localStorage.getItem('sv_platforms')||'null'); if (Array.isArray(v) && v.length) return v; } catch(e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_PLATFORMS));
+})();
+function savePlatforms(){ localStorage.setItem('sv_platforms', JSON.stringify(platforms)); }
+function getPlat(id){ return platforms.find(p => p.id === id); }
+function customCount(){ return platforms.filter(p => String(p.id).startsWith('custom-')).length; }
 
 // ─── State ──────────────────────────────
 let cfg = {
@@ -515,27 +545,33 @@ window.addEventListener('load', () => {
 
 function renderPlatformCards() {
   const list = document.getElementById('plat-list');
-  list.innerHTML = Object.entries(PLATFORMS).map(([key, p]) => `
-    <div id="plat-${key}" class="plat-card ${key===cfg.platform?'active':''}" onclick="setPlatform('${key}')">
-      <span style="font-size:20px">${p.emoji}</span>
-      <div>
-        <p class="text-sm font-semibold text-white">${p.name}</p>
-        <p class="text-xs" style="color:#9e9aaa">${p.shortDesc}</p>
+  list.innerHTML = platforms.map(p => `
+    <div id="plat-${p.id}" class="plat-card ${p.id===cfg.platform?'active':''}" onclick="setPlatform('${p.id}')" style="position:relative;padding-right:52px">
+      <div style="min-width:0">
+        <p class="text-sm font-semibold text-white truncate">${p.name}</p>
+        <p class="text-xs truncate" style="color:#9e9aaa">${p.desc||''}</p>
       </div>
-    </div>
-  `).join('');
+      <div style="position:absolute;top:8px;right:8px;display:flex;gap:2px">
+        <button onclick="event.stopPropagation();openPlatModal('${p.id}')" title="수정" class="mat-icon nav-link" style="font-size:14px;padding:3px">edit</button>
+        <button onclick="event.stopPropagation();deletePlatform('${p.id}')" title="삭제" class="mat-icon" style="font-size:14px;padding:3px;color:#e8587a;opacity:0.6">delete</button>
+      </div>
+    </div>`).join('') + `
+    <div class="plat-card" onclick="openPlatModal(null)" style="border-style:dashed;justify-content:center;color:#9e9aaa">
+      <span class="mat-icon text-base">add</span>
+      <p class="text-sm">플랫폼 추가</p>
+    </div>`;
 }
 
 function applyPlatformCfg(key) {
-  const p = PLATFORMS[key];
-  if (!p) return;
+  let p = getPlat(key);
+  if (!p) { p = platforms[0]; if (!p) return; cfg.platform = p.id; key = p.id; localStorage.setItem('sv_exp_plat', key); }
   cfg.gap = p.gap; cfg.indent = p.indent; cfg.header = p.header; cfg.mobile = p.mobile;
   document.getElementById('gap-val').textContent = cfg.gap;
   setToggle('tog-indent', cfg.indent);
   setToggle('tog-header', cfg.header);
   setToggle('tog-mobile', cfg.mobile);
   document.getElementById('tip-title').textContent = p.name + ' 최적화';
-  document.getElementById('tip-desc').textContent = p.shortDesc;
+  document.getElementById('tip-desc').textContent = p.desc || '';
   document.getElementById('tip-plat-name').textContent = p.name;
   renderTips(key);
   process();
@@ -543,13 +579,13 @@ function applyPlatformCfg(key) {
 
 function renderTips(key) {
   key = key || cfg.platform;
-  const tips = PLATFORMS[key]?.tips || [];
-  document.getElementById('tips-list').innerHTML = tips.map(t => `
+  const tips = getPlat(key)?.tips || [];
+  document.getElementById('tips-list').innerHTML = tips.length ? tips.map(t => `
     <li class="flex items-start gap-2 text-xs" style="color:#9e9aaa">
       <span class="mat-icon text-sm flex-shrink-0 mt-0.5" style="color:#b8a2ff">check_circle</span>
       <span>${t}</span>
     </li>
-  `).join('');
+  `).join('') : `<li class="text-xs" style="color:#5e5b68">직접 추가한 플랫폼입니다. 설정한 형식(빈 줄·들여쓰기 등)이 그대로 적용됩니다.</li>`;
 }
 
 function setToggle(id, on) {
@@ -669,7 +705,7 @@ window.saveToHistory = function() {
   if (!text) return;
   const item = {
     id: Date.now(),
-    platform: PLATFORMS[cfg.platform]?.name || cfg.platform,
+    platform: getPlat(cfg.platform)?.name || cfg.platform,
     num: document.getElementById('inp-num').value,
     subtitle: document.getElementById('inp-subtitle').value,
     chars: text.replace(/\s/g,'').length,
@@ -729,17 +765,41 @@ window.saveCurrentPreset = function() {
 function renderPresets() {
   const list = document.getElementById('preset-list');
   const items = [
-    ...Object.entries(PLATFORMS).slice(0,4).map(([key,p]) => `<button onclick="setPlatform('${key}')" class="preset-chip ${key===cfg.platform?'active':''}">${p.emoji} ${p.name}</button>`),
-    ...savedPresets.map(p => `<button onclick="applyPreset(${p.id})" class="preset-chip custom">⚙️ ${p.name}</button>`),
+    ...platforms.map(p => `<button onclick="setPlatform('${p.id}')" class="preset-chip ${p.id===cfg.platform?'active':''}">${p.name}</button>`),
+    ...savedPresets.map(p => `<span class="preset-chip custom" style="display:inline-flex;align-items:center;gap:6px">
+      <span onclick="applyPreset(${p.id})" style="cursor:pointer">${p.name}</span>
+      <span class="mat-icon" onclick="renamePreset(${p.id})" title="이름 수정" style="font-size:13px;cursor:pointer;opacity:0.65">edit</span>
+      <span class="mat-icon" onclick="deletePreset(${p.id})" title="삭제" style="font-size:13px;cursor:pointer;color:#e8587a;opacity:0.65">close</span>
+    </span>`),
     `<button onclick="saveCurrentPreset()" class="preset-chip custom"><span style="font-size:13px">+</span> 현재 설정 저장</button>`,
   ];
   list.innerHTML = items.join('');
 }
 
+window.renamePreset = function(id) {
+  const p = savedPresets.find(p => p.id === id);
+  if (!p) return;
+  const name = prompt('새 이름을 입력하세요:', p.name);
+  if (!name) return;
+  p.name = name;
+  localStorage.setItem('sv_exp_presets', JSON.stringify(savedPresets));
+  renderPresets();
+};
+
+window.deletePreset = function(id) {
+  const p = savedPresets.find(p => p.id === id);
+  if (!p) return;
+  if (!confirm(`'${p.name}' 설정을 삭제할까요?`)) return;
+  savedPresets = savedPresets.filter(x => x.id !== id);
+  localStorage.setItem('sv_exp_presets', JSON.stringify(savedPresets));
+  renderPresets();
+};
+
 window.applyPreset = function(id) {
   const p = savedPresets.find(p => p.id === id);
   if (!p) return;
-  cfg.platform = p.platform; cfg.gap = p.gap; cfg.indent = p.indent; cfg.header = p.header; cfg.mobile = p.mobile;
+  if (getPlat(p.platform)) cfg.platform = p.platform;
+  cfg.gap = p.gap; cfg.indent = p.indent; cfg.header = p.header; cfg.mobile = p.mobile;
   renderPlatformCards();
   document.getElementById('gap-val').textContent = cfg.gap;
   setToggle('tog-indent', cfg.indent);
@@ -749,6 +809,65 @@ window.applyPreset = function(id) {
   renderPresets();
   process();
 };
+
+// ─── 플랫폼 추가/수정/삭제 ──────────────────────────────
+window.openPlatModal = function(id) {
+  if (!id) {
+    if (customCount() >= MAX_CUSTOM) { alert('추가 플랫폼은 최대 ' + MAX_CUSTOM + '개까지 만들 수 있어요.'); return; }
+    const plan = localStorage.getItem('sv_plan') || 'free';
+    if (plan === 'free' && !confirm('플랫폼 추가는 Pro 플랜 기능입니다.\n(프로토타입 단계라 [확인]을 누르면 체험으로 계속할 수 있어요)')) {
+      location.href = 'pricing.html'; return;
+    }
+  }
+  const p = id ? getPlat(id) : null;
+  document.getElementById('plat-edit-id').value = id || '';
+  document.getElementById('plat-modal-title').textContent = p ? `'${p.name}' 수정` : '플랫폼 추가';
+  document.getElementById('pm-name').value = p ? p.name : '';
+  document.getElementById('pm-desc').value = p ? (p.desc||'') : '';
+  document.getElementById('pm-gap').value = p ? p.gap : 1;
+  document.getElementById('pm-indent').checked = p ? !!p.indent : false;
+  document.getElementById('pm-header').checked = p ? !!p.header : true;
+  document.getElementById('pm-mobile').checked = p ? !!p.mobile : false;
+  document.getElementById('plat-modal').style.display = 'flex';
+};
+window.closePlatModal = function() { document.getElementById('plat-modal').style.display = 'none'; };
+window.savePlatModal = function() {
+  const name = document.getElementById('pm-name').value.trim();
+  if (!name) { document.getElementById('pm-name').focus(); return; }
+  const data = {
+    name,
+    desc: document.getElementById('pm-desc').value.trim(),
+    gap: Math.max(0, Math.min(4, parseInt(document.getElementById('pm-gap').value) || 0)),
+    indent: document.getElementById('pm-indent').checked,
+    header: document.getElementById('pm-header').checked,
+    mobile: document.getElementById('pm-mobile').checked,
+  };
+  const id = document.getElementById('plat-edit-id').value;
+  if (id) {
+    const p = getPlat(id); if (!p) return;
+    Object.assign(p, data);
+  } else {
+    const newId = 'custom-' + Date.now();
+    platforms.push({ id: newId, tips: [], ...data });
+    cfg.platform = newId;
+    localStorage.setItem('sv_exp_plat', newId);
+  }
+  savePlatforms();
+  closePlatModal();
+  renderPlatformCards(); renderPresets(); applyPlatformCfg(cfg.platform);
+};
+window.deletePlatform = function(id) {
+  const p = getPlat(id); if (!p) return;
+  if (!confirm(`'${p.name}' 플랫폼을 삭제할까요?`)) return;
+  platforms = platforms.filter(x => x.id !== id);
+  if (!platforms.length) { platforms = JSON.parse(JSON.stringify(DEFAULT_PLATFORMS)); alert('플랫폼이 모두 삭제되어 기본 목록을 복원했습니다.'); }
+  savePlatforms();
+  if (cfg.platform === id) { cfg.platform = platforms[0].id; localStorage.setItem('sv_exp_plat', cfg.platform); }
+  renderPlatformCards(); renderPresets(); applyPlatformCfg(cfg.platform);
+};
+
+// ESC로 모달 닫기
+window.addEventListener('keydown', e => { if (e.key === 'Escape') closePlatModal(); });
 
 // ─── Tabs ──────────────────────────────
 window.setTab = function(tab) {
