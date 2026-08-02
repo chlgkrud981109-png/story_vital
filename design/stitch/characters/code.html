@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Scriptorium - Character Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed-dim": "#9c7eff",
+                      "surface-variant": "#25252a",
+                      "error-container": "#a70138",
+                      "secondary-dim": "#ba85fb",
+                      "on-tertiary-fixed": "#380019",
+                      "primary-fixed": "#a98fff",
+                      "on-secondary-fixed-variant": "#6834a6",
+                      "outline-variant": "#48474b",
+                      "error": "#ff6e84",
+                      "secondary": "#bc87fe",
+                      "tertiary": "#ff97b8",
+                      "tertiary-dim": "#ef77a0",
+                      "primary-dim": "#7e51ff",
+                      "on-surface": "#f0edf1",
+                      "secondary-fixed-dim": "#d7b5ff",
+                      "surface": "#0e0e11",
+                      "secondary-container": "#5e289b",
+                      "background": "#0e0e11",
+                      "surface-container-lowest": "#000000",
+                      "on-tertiary-container": "#59002b",
+                      "on-secondary-container": "#e1c5ff",
+                      "on-tertiary-fixed-variant": "#70103b",
+                      "inverse-surface": "#fcf8fd",
+                      "primary-container": "#a98fff",
+                      "surface-container": "#19191d",
+                      "on-surface-variant": "#acaaae",
+                      "on-background": "#f0edf1",
+                      "inverse-primary": "#6834eb",
+                      "surface-container-high": "#1f1f23",
+                      "secondary-fixed": "#e2c7ff",
+                      "on-error-container": "#ffb2b9",
+                      "surface-container-highest": "#25252a",
+                      "surface-container-low": "#131316",
+                      "on-secondary-fixed": "#4a0b87",
+                      "on-secondary": "#340064",
+                      "on-tertiary": "#6a0936",
+                      "outline": "#767579",
+                      "surface-tint": "#b6a0ff",
+                      "primary": "#b6a0ff",
+                      "error-dim": "#d73357",
+                      "on-error": "#490013",
+                      "on-primary-fixed-variant": "#32008a",
+                      "tertiary-fixed": "#ff8db2",
+                      "tertiary-fixed-dim": "#f57ca5",
+                      "surface-dim": "#0e0e11",
+                      "inverse-on-surface": "#555458",
+                      "on-primary-container": "#280072",
+                      "surface-bright": "#2c2c30",
+                      "on-primary": "#340090",
+                      "on-primary-fixed": "#000000",
+                      "tertiary-container": "#fc81ab"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "fontFamily": {
+                      "headline": ["Manrope"],
+                      "body": ["Inter"],
+                      "label": ["Inter"]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+        }
+        .glass-panel {
+            background: rgba(25, 25, 29, 0.7);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(126, 81, 255, 0.15);
+        }
+        .recessed-input {
+            background-color: #000000;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0e0e11; }
+        ::-webkit-scrollbar-thumb { background: #2c2c30; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased overflow-hidden h-screen">
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 left-0 h-16 bg-[#0e0e11] flex items-center justify-between px-6 w-full z-40 font-['Manrope'] antialiased">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tight text-white">The Scriptorium</span>
+<nav class="hidden md:flex gap-6 items-center">
+<span class="text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-95 text-sm">Dashboard</span>
+<span class="text-[#7e51ff] font-bold cursor-pointer active:scale-95 text-sm">Manuscripts</span>
+<span class="text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-95 text-sm">Library</span>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-full text-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">timer</span>
+<span>45:12 Writing Sprint</span>
+</div>
+<span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-white transition-colors">notifications</span>
+<img alt="Author Profile" class="w-8 h-8 rounded-full border border-primary-dim/30" data-alt="Close-up portrait of a creative professional in a dimly lit studio with violet ambient light reflecting on their glasses" src="https://lh3.googleusercontent.com/aida-public/AB6AXuClWj1IM_kdDLdMlv5jVpT91I-OfYK_7xpsHQmppWYSfVKuxdBoxc3Xg-W-FmMG9aZxb9VrIF5FWiHoCsO0tdhP-w5LyjlHnhPAnk_DA8xN8pVf5U957DBQ9UkpzJOx--QcRvGczpzBk4AciAY-f_lrgjWEs2Qe_ImgJR_QfDdrWHuVklAgEUss2D4QDRL6nbpSw2z-O91cy4p-YBgH0bQj39vtTdLM_JglSbHXoOwt_NAV4HtVT7Magjirz1ui4JPdfTXAWuwXiiRo"/>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-16 bottom-0 w-64 bg-[#131316] flex flex-col py-8 z-30 shadow-[20px_0_50px_rgba(0,0,0,0.5)] font-['Manrope'] text-sm tracking-wide">
+<div class="px-6 mb-8">
+<h2 class="text-white font-black text-lg">Manuscript Alpha</h2>
+<p class="text-gray-500 text-xs">Drafting Phase</p>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-4 px-6 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span>Chapters</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 bg-[#1f1f23] text-white border-l-2 border-[#ba85fb] hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">group</span>
+<span>Characters</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">public</span>
+<span>Worldbuilding</span>
+</a>
+</div>
+<div class="mt-auto flex flex-col gap-1">
+<a class="flex items-center gap-4 px-6 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Help</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 mt-16 p-8 h-[calc(100vh-64px)] grid grid-cols-12 gap-8 overflow-hidden">
+<!-- Left Column: Chapter Timeline -->
+<section class="col-span-3 h-full flex flex-col gap-6">
+<div class="flex items-center justify-between">
+<h3 class="font-headline font-bold text-white tracking-tight">Timeline</h3>
+<span class="text-xs text-primary bg-primary-dim/10 px-2 py-0.5 rounded-full">Chapter 14</span>
+</div>
+<div class="flex-1 overflow-y-auto pr-2 space-y-8 relative">
+<!-- Timeline Line -->
+<div class="absolute left-4 top-0 bottom-0 w-[1px] bg-outline-variant/30 border-dashed border-l"></div>
+<!-- Event 1 -->
+<div class="relative pl-10">
+<div class="absolute left-[13px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary ring-4 ring-surface"></div>
+<p class="text-[10px] uppercase tracking-widest text-secondary font-bold mb-1">02:14 PM • Arrival</p>
+<h4 class="text-sm font-semibold text-white mb-1">Entry into the Scriptorium</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">Kaelen discovers the hidden portal behind the library stacks. Atmospheric tension spikes.</p>
+</div>
+<!-- Event 2 -->
+<div class="relative pl-10">
+<div class="absolute left-[13px] top-1.5 w-2.5 h-2.5 rounded-full bg-outline-variant ring-4 ring-surface"></div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">04:30 PM • Conflict</p>
+<h4 class="text-sm font-semibold text-white mb-1">The Shadow Stalker</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">First confrontation with the ink-wraith. Character ability: "Luminous Quill" revealed.</p>
+</div>
+<!-- Event 3 -->
+<div class="relative pl-10 opacity-60">
+<div class="absolute left-[13px] top-1.5 w-2.5 h-2.5 rounded-full bg-outline-variant ring-4 ring-surface"></div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">08:00 PM • Dialogue</p>
+<h4 class="text-sm font-semibold text-white mb-1">Whispers of the Past</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">Kaelen and Mira discuss the prophecy in the bioluminescent garden.</p>
+</div>
+<!-- Event 4 (New) -->
+<div class="relative pl-10 bg-surface-container-high/40 p-4 rounded-xl -ml-2 border-l-2 border-primary-dim">
+<div class="absolute left-[15px] top-5.5 w-2.5 h-2.5 rounded-full bg-tertiary ring-4 ring-[#1f1f23]"></div>
+<p class="text-[10px] uppercase tracking-widest text-tertiary font-bold mb-1">Chapter Finale</p>
+<h4 class="text-sm font-semibold text-white mb-1">The Great Betrayal</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">Mira steals the core fragment while Kaelen is distracted by the archives.</p>
+</div>
+</div>
+</section>
+<!-- Center Column: Character Form -->
+<section class="col-span-5 h-full overflow-y-auto pr-4">
+<div class="glass-panel p-8 rounded-xl space-y-8">
+<div class="flex items-start justify-between">
+<div>
+<h1 class="text-3xl font-headline font-extrabold text-white mb-2">Character Forge</h1>
+<p class="text-sm text-on-surface-variant">Sculpting the essence of your protagonist.</p>
+</div>
+<div class="group relative">
+<div class="w-24 h-24 rounded-full bg-surface-container-lowest border-2 border-dashed border-primary-dim/40 flex items-center justify-center cursor-pointer overflow-hidden transition-all group-hover:border-primary">
+<span class="material-symbols-outlined text-primary-dim group-hover:scale-110 transition-transform">add_a_photo</span>
+<img alt="Character Portrait" class="absolute inset-0 w-full h-full object-cover opacity-60" data-alt="Hyper-realistic concept art of a male mage with glowing violet eyes and intricate silver facial markings in a dark fantasy setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAy-VEvKz-Gm8hnr_GwbyuGiRHf39bULMKfaqhLQG481C2jmT3NMn0Mu-YGk19fEX1YGgMq94yAd6x-3JGns4FfJpuUZSVNnbdlh8VBfOBdBdBugYUReINtkAPCqZ8N_L3ePBT8g-nAwC_ucGiwtuldY0LbP-2M_PByVDXpoiGbO8F5cR2IwOK9uy5IsW8HPM7dFKpbAV4i9gkCAiSFVbh6ZA8sJGStsVKrSSXvtPj6gVxSToQvb1G5s1CnG_CYNqPfxP5h5hagBefn"/>
+</div>
+<div class="absolute -bottom-2 -right-2 bg-primary-dim p-1.5 rounded-full shadow-lg">
+<span class="material-symbols-outlined text-[14px] text-white">edit</span>
+</div>
+</div>
+</div>
+<form class="space-y-6">
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Full Name</label>
+<input class="w-full recessed-input border-none rounded-lg p-3 text-white focus:ring-1 focus:ring-primary transition-all font-body" type="text" value="Kaelen Vos"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Archetype</label>
+<select class="w-full recessed-input border-none rounded-lg p-3 text-white focus:ring-1 focus:ring-primary transition-all font-body appearance-none">
+<option>Reluctant Hero</option>
+<option>Fallen Mentor</option>
+<option>The Sage</option>
+</select>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Special Abilities</label>
+<div class="flex flex-wrap gap-2 mb-2">
+<span class="bg-primary-dim/20 text-primary-fixed border border-primary/20 px-3 py-1 rounded-full text-xs flex items-center gap-2">
+                                Ink Manipulation <span class="material-symbols-outlined text-[14px] cursor-pointer">close</span>
+</span>
+<span class="bg-primary-dim/20 text-primary-fixed border border-primary/20 px-3 py-1 rounded-full text-xs flex items-center gap-2">
+                                Chrono-Echo <span class="material-symbols-outlined text-[14px] cursor-pointer">close</span>
+</span>
+</div>
+<input class="w-full recessed-input border-none rounded-lg p-3 text-white focus:ring-1 focus:ring-primary transition-all text-sm" placeholder="Add new ability..." type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Personality &amp; Flaws</label>
+<textarea class="w-full recessed-input border-none rounded-lg p-3 text-white focus:ring-1 focus:ring-primary transition-all text-sm leading-relaxed" placeholder="Describe their inner world..." rows="4">Stubbornly loyal but paralyzed by the fear of repeating his father's mistakes. Kaelen often retreats into analytical silence when confronted with emotional stakes.</textarea>
+</div>
+<div class="pt-4 flex gap-4">
+<button class="flex-1 bg-primary-dim text-white font-bold py-3 rounded-lg shadow-[0_0_12px_rgba(126,81,255,0.3)] hover:shadow-[0_0_20px_rgba(126,81,255,0.5)] transition-all active:scale-95">
+                            Save Character
+                        </button>
+<button class="px-6 py-3 border border-primary-dim/30 text-primary hover:bg-primary-dim/5 transition-all rounded-lg font-bold">
+                            Archive
+                        </button>
+</div>
+</form>
+</div>
+</section>
+<!-- Right Column: Relationship Map -->
+<section class="col-span-4 h-full flex flex-col gap-6">
+<div class="flex items-center justify-between">
+<h3 class="font-headline font-bold text-white tracking-tight">Relationship Map</h3>
+<span class="material-symbols-outlined text-primary cursor-pointer">hub</span>
+</div>
+<div class="flex-1 glass-panel rounded-xl relative overflow-hidden p-6 flex flex-col">
+<div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(circle, #7e51ff 1px, transparent 1px); background-size: 20px 20px;"></div>
+<!-- Relationship Visualization Area -->
+<div class="relative flex-1 flex items-center justify-center">
+<!-- Central Node -->
+<div class="z-20 text-center">
+<div class="w-16 h-16 rounded-full border-2 border-primary p-1 bg-surface ring-8 ring-primary/10">
+<img alt="Kaelen Vos" class="w-full h-auto rounded-full" data-alt="Digital painting of Kaelen Vos, a mage with glowing purple accents and sharp features" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJ2Q3hBDTH2AnWKlfjgjx__lkFizYPxS3OKNEEKNAcp2kZXSQ82vuPGkLE03Duh6e23cHpw9sUVq69yEhgu7vsZw5SWE6HbD9w_VaIc-WXDz1K0PXMDdFQ2YOf3HuZ4si-Zt-p8jkKLVmL41k_qLXy1sSkRYBIbi2dX4ask73XD6i1T1F2RFdBJu0TeJyc4UZIq8tT6YM9-oyOdaEwKYIABvYzfeDmRv-_CVtbqmQaABx-_Q4cKAz6fLDjS0iT1r4euxMorAww3b5g"/>
+</div>
+<p class="text-xs font-bold mt-2 text-white">Kaelen Vos</p>
+</div>
+<!-- Connection Lines (SVG) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none opacity-40">
+<line stroke="#bc87fe" stroke-dasharray="4" stroke-width="1" x1="50%" x2="20%" y1="50%" y2="25%"></line>
+<line stroke="#ff97b8" stroke-width="2" x1="50%" x2="80%" y1="50%" y2="30%"></line>
+<line stroke="#bc87fe" stroke-width="1" x1="50%" x2="60%" y1="50%" y2="75%"></line>
+</svg>
+<!-- Related Nodes -->
+<div class="absolute top-[25%] left-[20%] text-center z-10">
+<div class="w-10 h-10 rounded-full border border-secondary p-0.5 bg-surface">
+<img alt="Mentor" class="w-full h-auto rounded-full" data-alt="Portrait of an elderly sage with silver beard and kind eyes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDr6Reo7UAD97v1dQSlOmAz5QUUzrBqJLMQjbQA45jjWP5YcA8fQCFI0SYwokYBRuDqDA6IYptTSzgzYXTJpb_gKRy3uCUYGp1F9PRqnE0pAptttfafAVQUCmvUksRDepW5PLQEd4wDv36HyF425VivaOY7FRiHEQUsQaX8j_F68VEQXpyMQWTlmYYQBnDU-uZbtlPB8pzxPHI_MtKyW5nme6IPtI5PsZkTnmROodLJpGgITYu16EcoAt-SLskQtuw6LxpW3iG2LcqG"/>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-1">Elara (Mentor)</p>
+</div>
+<div class="absolute top-[30%] right-[15%] text-center z-10">
+<div class="w-12 h-12 rounded-full border-2 border-tertiary p-0.5 bg-surface shadow-[0_0_15px_rgba(255,151,184,0.3)]">
+<img alt="Rival" class="w-full h-auto rounded-full" data-alt="Dark and moody portrait of a mysterious rival with glowing red eyes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvUCGW3vXBBhjnymx6_od3dLheEXV7S1D0wgMEIix8wuT4YyrKBnk-35mCWAfWnC452nrI4oSGWkzZj716LpKRkDF7D5Hwe-8WPLZ9A7srhlgRfBYY7PDrJreHNlAJWdnLfN9j7V7DknxurCs723IOSs7Ztd9ACupQYFnfmrAIaTT_AdrSKskLtmZo98uRfLpE-cu5mKEBKwEGagwKhYXLjsDocRdzBFpRwfm9ZXEQ7O67TRJnhF3rHz04S0V6i54WDo1Brlf9H1un"/>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-1 font-bold text-tertiary">The Inquisitor</p>
+</div>
+<div class="absolute bottom-[20%] right-[30%] text-center z-10">
+<div class="w-10 h-10 rounded-full border border-secondary p-0.5 bg-surface">
+<img alt="Mira" class="w-full h-auto rounded-full" data-alt="Spirited young woman with braided hair and adventuring gear" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtjsWu2Yvq2CM2nz72dhIoxW1bcl8jMvGv7Q518UPC5hS-4iokkHDATuvW-ujVzW3QXN6N3egkMfHt52ehOCBbGAf1FCQmryaRSm63lZRNSeXepQjRq_WQbbFKi1k2B7t04Nih1-xDMr8i51hWUzjPjCVAK8TK5WrcFR-jv0fydoBEfbC2dTijARLTHHrbFAcxjfQEUaVMen7btjiAo7sq-7H2gPcpeF6A1OBbLvDiVYlllAgOTMY1IpCpEbXkBGe3olcAs-Wbo5FL"/>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-1">Mira (Ally)</p>
+</div>
+</div>
+<!-- Legend -->
+<div class="mt-auto space-y-3 pt-6 border-t border-outline-variant/20">
+<div class="flex items-center justify-between text-[11px]">
+<div class="flex items-center gap-2">
+<span class="w-3 h-0.5 bg-tertiary"></span>
+<span class="text-on-surface-variant">Antagonist Conflict</span>
+</div>
+<span class="text-tertiary font-bold">High</span>
+</div>
+<div class="flex items-center justify-between text-[11px]">
+<div class="flex items-center gap-2">
+<span class="w-3 h-0.5 bg-secondary border-dashed border-b"></span>
+<span class="text-on-surface-variant">Mentor Guidance</span>
+</div>
+<span class="text-secondary">Moderate</span>
+</div>
+</div>
+</div>
+<!-- Quick Stats -->
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-high rounded-xl p-4 border-l-2 border-primary">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest mb-1">Total Mentions</p>
+<p class="text-2xl font-headline font-black text-white">4,821</p>
+</div>
+<div class="bg-surface-container-high rounded-xl p-4 border-l-2 border-secondary">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest mb-1">Screen Time</p>
+<p class="text-2xl font-headline font-black text-white">82%</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Floating Action Button (SUPPRESSED based on context: Details/Transactional) -->
+</body></html>

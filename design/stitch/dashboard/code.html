@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Scriptorium - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#25252a",
+                    "tertiary-dim": "#ef77a0",
+                    "primary-container": "#a98fff",
+                    "on-background": "#f0edf1",
+                    "surface-container": "#19191d",
+                    "tertiary-container": "#fc81ab",
+                    "on-surface": "#f0edf1",
+                    "surface-dim": "#0e0e11",
+                    "inverse-on-surface": "#555458",
+                    "on-secondary-fixed-variant": "#6834a6",
+                    "secondary-container": "#5e289b",
+                    "inverse-primary": "#6834eb",
+                    "surface-tint": "#b6a0ff",
+                    "error-container": "#a70138",
+                    "outline-variant": "#48474b",
+                    "on-primary-fixed": "#000000",
+                    "error": "#ff6e84",
+                    "surface": "#0e0e11",
+                    "secondary-fixed-dim": "#d7b5ff",
+                    "outline": "#767579",
+                    "secondary": "#bc87fe",
+                    "surface-container-lowest": "#000000",
+                    "on-primary-fixed-variant": "#32008a",
+                    "surface-bright": "#2c2c30",
+                    "secondary-fixed": "#e2c7ff",
+                    "primary-dim": "#7e51ff",
+                    "on-surface-variant": "#acaaae",
+                    "on-secondary-fixed": "#4a0b87",
+                    "surface-container-highest": "#25252a",
+                    "on-tertiary-container": "#59002b",
+                    "on-error": "#490013",
+                    "tertiary-fixed-dim": "#f57ca5",
+                    "secondary-dim": "#ba85fb",
+                    "on-tertiary": "#6a0936",
+                    "on-primary-container": "#280072",
+                    "primary-fixed-dim": "#9c7eff",
+                    "inverse-surface": "#fcf8fd",
+                    "primary": "#b6a0ff",
+                    "on-tertiary-fixed-variant": "#70103b",
+                    "surface-container-high": "#1f1f23",
+                    "on-tertiary-fixed": "#380019",
+                    "tertiary": "#ff97b8",
+                    "on-secondary-container": "#e1c5ff",
+                    "tertiary-fixed": "#ff8db2",
+                    "on-primary": "#340090",
+                    "background": "#0e0e11",
+                    "surface-container-low": "#131316",
+                    "on-error-container": "#ffb2b9",
+                    "on-secondary": "#340064",
+                    "primary-fixed": "#a98fff",
+                    "error-dim": "#d73357"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #0e0e11;
+            color: #f0edf1;
+        }
+        .glass-panel {
+            background: rgba(25, 25, 29, 0.7);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(126, 81, 255, 0.15);
+        }
+        .neon-glow-primary {
+            box-shadow: 0 0 12px rgba(126, 81, 255, 0.3);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="font-body antialiased selection:bg-primary-dim selection:text-white">
+<!-- Top Navigation Shell -->
+<nav class="fixed top-0 right-0 left-0 h-16 bg-[#0e0e11] flex items-center justify-between px-6 w-full z-40 font-['Manrope'] antialiased">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tight text-white">The Scriptorium</span>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-[#7e51ff] font-bold cursor-pointer active:scale-95 transition-colors" href="#">Dashboard</a>
+<a class="text-gray-400 hover:text-white cursor-pointer active:scale-95 transition-colors" href="#">Library</a>
+<a class="text-gray-400 hover:text-white cursor-pointer active:scale-95 transition-colors" href="#">Chapters</a>
+<a class="text-gray-400 hover:text-white cursor-pointer active:scale-95 transition-colors" href="#">Worldbuilding</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
+<input class="bg-surface-container-lowest text-sm rounded-lg pl-10 pr-4 py-2 w-64 border-none focus:ring-1 focus:ring-primary-dim transition-all" placeholder="Search manuscripts..." type="text"/>
+</div>
+<span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-white">timer</span>
+<div class="relative">
+<span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-white">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-tertiary rounded-full"></span>
+</div>
+<img alt="Author Profile" class="w-8 h-8 rounded-full border border-outline-variant" data-alt="portrait of a focused writer in a dimly lit room with purple neon reflections on his face, high-end digital photography style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuChAcFaWJVPVBZvMIhXDbPT7P0qvaNB2N7iGevkBq5e6adbqkjJPhcJD1ZKcW6lPfXosppvi9bkhHSqce2mfQPBYRzwTN3aC2TmqKic-rNeNM8IoS6-a87KAmPISl_dJGG1Kp3ib0Dg9sfhbNsGeRlQ0EFseI7qNfb45sCZ6yZnaJEks7r-qW2cMS1H0frVOeueQT9wQJoAMEOkRWvOCKD3dNa4Ad3nqeejNMSnochEC4tjB3SkfUDgW8E-Grwy3Gj-dINCB0iB0292"/>
+</div>
+</nav>
+<!-- Side Navigation Shell -->
+<aside class="fixed left-0 top-0 bottom-0 w-64 h-full bg-[#131316] hidden md:flex flex-col py-8 z-30 font-['Manrope'] text-sm tracking-wide shadow-[20px_0_50px_rgba(0,0,0,0.5)]">
+<div class="px-6 mb-10 pt-12">
+<h2 class="text-white font-black text-lg">Manuscript Alpha</h2>
+<p class="text-primary-dim text-xs uppercase tracking-widest mt-1">Drafting Phase</p>
+</div>
+<nav class="flex-1 space-y-2 px-3">
+<a class="flex items-center gap-3 px-4 py-3 bg-[#1f1f23] text-white border-l-2 border-[#ba85fb] hover:translate-x-1 duration-200 transition-all rounded-r-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] hover:translate-x-1 duration-200 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">library_books</span>
+<span>Library</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] hover:translate-x-1 duration-200 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span>Chapters</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] hover:translate-x-1 duration-200 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">public</span>
+<span>Worldbuilding</span>
+</a>
+</nav>
+<div class="px-3 mt-auto space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] hover:translate-x-1 duration-200 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] hover:translate-x-1 duration-200 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Help</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="pt-24 pb-12 md:pl-72 px-6">
+<div class="max-w-7xl mx-auto space-y-8">
+<!-- Section 1: Writing Progress Hero -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 relative overflow-hidden rounded-xl bg-surface-container-high p-8 flex flex-col justify-between min-h-[320px] shadow-2xl">
+<!-- Background Accent -->
+<div class="absolute top-[-20%] right-[-10%] w-96 h-96 bg-primary-dim opacity-10 blur-[100px] rounded-full"></div>
+<div>
+<header class="flex justify-between items-start mb-6">
+<div>
+<h1 class="text-3xl font-headline font-extrabold text-white mb-2">Welcome back, Silas.</h1>
+<p class="text-on-surface-variant max-w-md">The threads of destiny await your touch. Your readers are eager for the next chapter.</p>
+</div>
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container-lowest rounded-full text-xs font-medium text-tertiary border border-tertiary/20">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span>Drafting Mode Active</span>
+</div>
+</header>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-8 mb-8">
+<div class="space-y-1">
+<p class="text-xs text-outline uppercase tracking-tighter font-bold">Words written today</p>
+<p class="text-4xl font-headline font-black text-white">2,481 <span class="text-sm text-secondary font-normal ml-1">/ 3,000</span></p>
+<div class="w-full bg-surface-container-lowest h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-secondary h-full rounded-full w-[82%] shadow-[0_0_8px_rgba(188,135,254,0.5)]"></div>
+</div>
+</div>
+<div class="space-y-1">
+<p class="text-xs text-outline uppercase tracking-tighter font-bold">Current Streak</p>
+<p class="text-4xl font-headline font-black text-white">12 <span class="text-sm text-tertiary font-normal ml-1">Days</span></p>
+<div class="flex gap-1 mt-2">
+<div class="h-1.5 w-4 rounded-full bg-tertiary"></div>
+<div class="h-1.5 w-4 rounded-full bg-tertiary"></div>
+<div class="h-1.5 w-4 rounded-full bg-tertiary"></div>
+<div class="h-1.5 w-4 rounded-full bg-surface-container-lowest"></div>
+</div>
+</div>
+<div class="hidden md:flex flex-col space-y-1">
+<p class="text-xs text-outline uppercase tracking-tighter font-bold">Draft Health</p>
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-xl font-bold">Excellent</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4 pt-4 border-t border-outline-variant/10">
+<button class="bg-primary-dim hover:bg-primary transition-all text-on-primary-fixed px-6 py-3 rounded-lg font-bold flex items-center gap-2 neon-glow-primary active:scale-95">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">edit</span>
+                            Continue Writing: Chapter 24
+                        </button>
+<button class="text-primary hover:bg-primary/10 px-6 py-3 rounded-lg font-bold border border-primary/20 transition-all">
+                            View Plan
+                        </button>
+</div>
+</div>
+<!-- Secondary Progress Widget (Bento style) -->
+<div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/10 flex flex-col justify-between">
+<div>
+<h3 class="text-on-surface font-bold text-lg mb-4">Milestone: Arc 2 Finish</h3>
+<div class="relative w-32 h-32 mx-auto mb-6">
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-surface-container-lowest" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-secondary" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-dasharray="364.4" stroke-dashoffset="120" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-2xl font-black text-white">67%</span>
+<span class="text-[10px] uppercase text-outline">Complete</span>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-center bg-surface-container-highest p-3 rounded-lg">
+<span class="text-sm">Word Goal</span>
+<span class="text-sm font-bold text-white">85,000 / 120k</span>
+</div>
+<div class="flex justify-between items-center bg-surface-container-highest p-3 rounded-lg">
+<span class="text-sm">Publication Date</span>
+<span class="text-sm font-bold text-tertiary">Oct 24, 2024</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Manuscript Overview -->
+<section>
+<div class="flex justify-between items-end mb-6">
+<div>
+<h2 class="text-xl font-bold text-white">Active Manuscripts</h2>
+<p class="text-outline text-sm">Managing 3 ongoing stories</p>
+</div>
+<button class="text-primary-dim text-sm font-bold flex items-center gap-1 hover:underline">
+                        Explore Library <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- Project Card 1 -->
+<div class="group bg-surface-container rounded-xl overflow-hidden hover:bg-surface-container-high transition-all cursor-pointer">
+<div class="h-48 relative overflow-hidden">
+<img alt="Novel Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="abstract artistic book cover with deep indigo and neon purple swirls, mysterious cosmic atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQx3s2nGqXl0VCFgqD9GEKcQcwkdEkgN419e4k1EhnkI__aKkNOdgRikPTNZovPXA04CYjMbcr4dk1rCjpdeNy1gTVw5_jwfAu2LX8v4GL22yeQXnIOkgqTJ4JjxnpLWxoLc_mltZSmukscqwHeuKjB3SyhiBKljH2qWj2Z4ireqd35aPOaoEAfmNTXzkZ8Aj2Da3U66uMrrV8DfCIkA5auNa-4ilUbR1ZRM4_IL8k1T_LGDmPzERa5vbicrXG2FRiH2LTb-XcuhQ-"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container to-transparent opacity-60"></div>
+<div class="absolute bottom-3 left-3 flex gap-2">
+<span class="px-2 py-0.5 bg-secondary-container/80 text-secondary-fixed text-[10px] font-bold rounded uppercase">LitRPG</span>
+<span class="px-2 py-0.5 bg-surface-bright/80 text-white text-[10px] font-bold rounded uppercase">Drafting</span>
+</div>
+</div>
+<div class="p-4">
+<h4 class="text-white font-bold truncate">Echoes of the Void</h4>
+<p class="text-outline text-xs mt-1">Edited 2 hours ago</p>
+<div class="mt-4 flex items-center justify-between">
+<span class="text-[10px] text-outline">142k Words</span>
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-primary-container text-[8px] flex items-center justify-center font-bold text-on-primary-container">S</div>
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-secondary-dim text-[8px] flex items-center justify-center font-bold text-on-secondary-container">E</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Project Card 2 -->
+<div class="group bg-surface-container rounded-xl overflow-hidden hover:bg-surface-container-high transition-all cursor-pointer">
+<div class="h-48 relative overflow-hidden">
+<img alt="Novel Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="cinematic forest path at twilight with glowing blue fireflies and ethereal fog, fantasy book cover style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKlty-6YHsYXk7RZkEiicwSas_PpevT9-E4qrXu_oTDxPPed8NDUZYmm91-FeF4mLY7i6bY0HETmffEpTmxV59yyMOqiSMk5fKLLpL7Ywdbr4fh8_3nZWWXrXi_mN6liCRMoxTpny3OTuo5SrjqOygoTQgcn5jRgrTmdhfLOX82RQMa2h29LE4Ol70yPJudqoBo0eEO4P7OuszjUkI60aZqvobGnzs4M_zV5-9pSeVm4Cx_wSQEeGNjr9VXbIbdj9cjbEePcmpqEEA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container to-transparent opacity-60"></div>
+<div class="absolute bottom-3 left-3 flex gap-2">
+<span class="px-2 py-0.5 bg-tertiary-container/80 text-on-tertiary-container text-[10px] font-bold rounded uppercase">Romance</span>
+<span class="px-2 py-0.5 bg-surface-bright/80 text-white text-[10px] font-bold rounded uppercase">Planning</span>
+</div>
+</div>
+<div class="p-4">
+<h4 class="text-white font-bold truncate">Beyond the Glass Gate</h4>
+<p class="text-outline text-xs mt-1">Edited 3 days ago</p>
+<div class="mt-4 flex items-center justify-between">
+<span class="text-[10px] text-outline">12k Words</span>
+<span class="material-symbols-outlined text-outline text-sm">lock</span>
+</div>
+</div>
+</div>
+<!-- Project Card 3 -->
+<div class="group bg-surface-container rounded-xl overflow-hidden hover:bg-surface-container-high transition-all cursor-pointer">
+<div class="h-48 relative overflow-hidden">
+<img alt="Novel Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="cyberpunk city skyline at night with massive holographic advertisements in pink and blue, sci-fi book cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1hdT2pnA8bcZY-v0m-2VMPFSSiwlU9EX1AGlDQp9vzilj2hCiaNsoYBvNjH1h9BSwZy1N7K2nNLw-MeHVujL1-Vs_Lj6bu2HiDdCLZCURMMC3F0ezaukK4lL-PcnI9r2nN9LzAPR4PdOwincrEyuvLvArWIUVGK1iR9awVAQbsax-FRtuuOiMhKfu01RjjN9hOBn1JHv6sTZFB0f0BV7KC8HdTzzsukStiqAWRSholG_AjJ29DZPTrXlSQ_-vv2VL1FxnrqlyjqXQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container to-transparent opacity-60"></div>
+<div class="absolute bottom-3 left-3 flex gap-2">
+<span class="px-2 py-0.5 bg-secondary-container/80 text-secondary-fixed text-[10px] font-bold rounded uppercase">Sci-Fi</span>
+<span class="px-2 py-0.5 bg-surface-bright/80 text-white text-[10px] font-bold rounded uppercase">Revision</span>
+</div>
+</div>
+<div class="p-4">
+<h4 class="text-white font-bold truncate">Neon Soul Protocol</h4>
+<p class="text-outline text-xs mt-1">Edited 1 week ago</p>
+<div class="mt-4 flex items-center justify-between">
+<span class="text-[10px] text-outline">89k Words</span>
+<div class="flex items-center gap-1 text-secondary text-[10px] font-bold">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>Rising</span>
+</div>
+</div>
+</div>
+</div>
+<!-- New Project CTA -->
+<div class="border-2 border-dashed border-outline-variant/30 rounded-xl flex flex-col items-center justify-center p-6 hover:border-primary-dim/50 hover:bg-primary-dim/5 transition-all group cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-outline group-hover:text-primary-dim group-hover:scale-110 transition-all mb-3">
+<span class="material-symbols-outlined text-3xl">add</span>
+</div>
+<span class="text-sm font-bold text-outline group-hover:text-white">Start New Manuscript</span>
+</div>
+</div>
+</section>
+<!-- Bottom Section: Stats & Activity -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Section 3: Weekly Activity Chart -->
+<div class="lg:col-span-2 bg-surface-container rounded-xl p-6 border border-outline-variant/10">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h3 class="text-white font-bold">Weekly Performance</h3>
+<p class="text-xs text-outline">14,302 words written this week</p>
+</div>
+<select class="bg-surface-container-high text-xs border-none rounded-lg focus:ring-1 focus:ring-primary-dim py-1.5 pl-3 pr-8">
+<option>Last 7 Days</option>
+<option>Last 30 Days</option>
+</select>
+</div>
+<div class="h-48 flex items-end justify-between gap-2 px-2">
+<!-- Bar chart simulation -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full bg-primary-dim/20 rounded-t-sm h-[40%] group-hover:bg-primary-dim transition-all relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface-bright px-2 py-1 rounded text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity">1.2k</div>
+</div>
+<span class="text-[10px] text-outline uppercase font-bold">Mon</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full bg-primary-dim/20 rounded-t-sm h-[65%] group-hover:bg-primary-dim transition-all relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface-bright px-2 py-1 rounded text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity">2.1k</div>
+</div>
+<span class="text-[10px] text-outline uppercase font-bold">Tue</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full bg-primary-dim/20 rounded-t-sm h-[45%] group-hover:bg-primary-dim transition-all relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface-bright px-2 py-1 rounded text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity">1.5k</div>
+</div>
+<span class="text-[10px] text-outline uppercase font-bold">Wed</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full bg-primary-dim rounded-t-sm h-[90%] shadow-[0_0_12px_rgba(126,81,255,0.4)] relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface-bright px-2 py-1 rounded text-[10px] text-white opacity-100">3.2k</div>
+</div>
+<span class="text-[10px] text-white uppercase font-bold">Thu</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full bg-primary-dim/20 rounded-t-sm h-[55%] group-hover:bg-primary-dim transition-all relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface-bright px-2 py-1 rounded text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity">1.8k</div>
+</div>
+<span class="text-[10px] text-outline uppercase font-bold">Fri</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full bg-primary-dim/20 rounded-t-sm h-[30%] group-hover:bg-primary-dim transition-all relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface-bright px-2 py-1 rounded text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity">0.8k</div>
+</div>
+<span class="text-[10px] text-outline uppercase font-bold">Sat</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full bg-primary-dim/20 rounded-t-sm h-[75%] group-hover:bg-primary-dim transition-all relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface-bright px-2 py-1 rounded text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity">2.8k</div>
+</div>
+<span class="text-[10px] text-outline uppercase font-bold">Sun</span>
+</div>
+</div>
+</div>
+<!-- Section 4: Recent Comments/Feedback -->
+<div class="bg-surface-container rounded-xl p-6 border border-outline-variant/10">
+<h3 class="text-white font-bold mb-4 flex items-center justify-between">
+                        Recent Feedback
+                        <span class="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">4 New</span>
+</h3>
+<div class="space-y-4 max-h-[220px] overflow-y-auto hide-scrollbar pr-1">
+<!-- Feedback Item 1 -->
+<div class="bg-surface-container-high p-3 rounded-lg border-l-2 border-secondary">
+<div class="flex items-center gap-2 mb-2">
+<img alt="Reviewer" class="w-5 h-5 rounded-full" data-alt="portrait of a young woman with a friendly expression, professional editor avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATsi5xAxsUsJchm1fIybzGiwsGdLgrUs54LVX6K6plvmPrazQ8zKjr9dIkhnOIN0XoyiJJSLX0NGLOwMBtZ-robaQFXNM4AF-YRUY0wBKdTyZFzIcvOc9B_MUd08np8VgFbeprYU4TK8o8L2q3n8fxIncK92TUYnyZOETii3JhiE3zvEHI6UNIQKh4NPeRJnYV6CsES8CVA_-dUAzK0zK-LcyHP3zbok1NFEfw26lMIcF6V6m3IB8p3osSPFeE3n_QKUl4Iwz43OuE"/>
+<span class="text-xs font-bold text-white">Elena Vance</span>
+<span class="text-[10px] text-outline ml-auto">10m ago</span>
+</div>
+<p class="text-[11px] text-on-surface-variant line-clamp-2">"The pacing in Chapter 23 is much better now, but the dialogue in the tavern scene feels a bit stiff..."</p>
+</div>
+<!-- Feedback Item 2 -->
+<div class="bg-surface-container-high p-3 rounded-lg border-l-2 border-primary">
+<div class="flex items-center gap-2 mb-2">
+<img alt="Reviewer" class="w-5 h-5 rounded-full" data-alt="portrait of a man with glasses, professional copy editor avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAl8E5lbbjItIPydZfhaUCduY0QsqB6vRulx8UcjgRPHilGAzwrhHTi9iE-KyQLGBS6d-orxEJW-rzcxDUXP8F9E-l_Thxi-7uqFls4UZnmn54cQm7OE6KvnpeWgmJp0E_dMn07169uQqTGR9vS6YjyvgL-GZkbBjVJGD8_-XSO52_ZGL5rxnEuYZ3_cjWgjSu9QF6SHcqhP-S2bLAqjKZSlRpPvA6vzjS_PWcscNt-AupY7sZtDdNSaEfju0e1sDxb9vrG7XNzafz1"/>
+<span class="text-xs font-bold text-white">Marcus Thorne</span>
+<span class="text-[10px] text-outline ml-auto">2h ago</span>
+</div>
+<p class="text-[11px] text-on-surface-variant line-clamp-2">"Consistency check: You mentioned the Void Gate was blue in Ch 2, but here it's described as obsidian."</p>
+</div>
+<!-- Feedback Item 3 -->
+<div class="bg-surface-container-high p-3 rounded-lg border-l-2 border-tertiary">
+<div class="flex items-center gap-2 mb-2">
+<span class="w-5 h-5 rounded-full bg-tertiary flex items-center justify-center text-[8px] text-on-tertiary font-bold">B</span>
+<span class="text-xs font-bold text-white">Beta Reader #12</span>
+<span class="text-[10px] text-outline ml-auto">5h ago</span>
+</div>
+<p class="text-[11px] text-on-surface-variant line-clamp-2">"OMG I did not see that twist coming! I'm literally crying right now."</p>
+</div>
+</div>
+<button class="w-full mt-4 py-2 text-xs font-bold text-outline hover:text-white hover:bg-surface-container-highest rounded-lg transition-all border border-outline-variant/10">
+                        View All Activity
+                    </button>
+</div>
+</section>
+</div>
+</main>
+<!-- Floating Action Button: Suppressed as per rule for Dashboard unless highly contextual -->
+<!-- We'll keep it as a 'Quick Note' FAB because it fits the 'Writer's Suite' atmosphere -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary-dim text-on-primary-fixed rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all neon-glow-primary z-50">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">note_add</span>
+</button>
+</body></html>

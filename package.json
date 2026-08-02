@@ -1,23 +1,9 @@
 {
-  "name": "scriptorium-app",
-  "private": true,
+  "name": "storyvital",
   "version": "1.0.0",
-  "type": "module",
+  "private": true,
+  "description": "StoryVital — 연재물 작가를 위한 설정·인물 관리 서비스",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "firebase": "^10.14.1"
-  },
-  "devDependencies": {
-    "@tailwindcss/container-queries": "^0.1.1",
-    "@tailwindcss/forms": "^0.5.11",
-    "@tailwindcss/postcss": "^4.2.2",
-    "autoprefixer": "^10.4.27",
-    "postcss": "^8.5.8",
-    "tailwindcss": "^4.2.2",
-    "vite": "^5.2.0"
+    "build": "node build.js"
   }
 }

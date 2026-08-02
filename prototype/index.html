@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StoryVital — 웹소설 작가의 워크스페이스</title>
+<link rel="stylesheet" href="sv-shared.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style>
+.auth-hero{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.ob-step{display:none}.ob-step.active{display:block}
+.step-track{display:flex;gap:6px;justify-content:center;margin-bottom:28px}
+.step-dot{width:8px;height:8px;border-radius:4px;background:var(--s5);transition:all 0.3s}
+.step-dot.current{width:24px;background:var(--primary-dim)}.step-dot.done{background:var(--success)}
+.ws-btn{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:var(--r-md);background:rgba(255,255,255,0.04);border:1px solid var(--b1);transition:all 0.15s;cursor:pointer;max-width:190px}
+.ws-btn:hover{border-color:rgba(184,158,255,0.25)}
+.ws-dd{position:absolute;top:calc(100% + 6px);left:0;min-width:210px;background:var(--s3);border:1px solid var(--b1);border-radius:var(--r-lg);overflow:hidden;z-index:300;box-shadow:var(--shadow-md);opacity:0;pointer-events:none;transform:translateY(-6px);transition:all 0.2s var(--ease)}
+.ws-dd.open{opacity:1;pointer-events:all;transform:translateY(0)}
+.ws-opt{padding:10px 14px;cursor:pointer;transition:background 0.1s;border-bottom:1px solid var(--b2)}.ws-opt:last-child{border-bottom:none}
+.ws-opt:hover{background:rgba(123,79,255,0.08)}
+.ws-opt.cur{color:var(--primary)}
+.stat-card{background:var(--s3);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px 18px;transition:border-color 0.2s}
+.stat-card:hover{border-color:rgba(184,158,255,0.22)}
+.ta{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r-md);background:rgba(229,85,122,0.06);border:1px solid rgba(229,85,122,0.14);margin-bottom:6px;cursor:pointer;transition:background 0.15s}
+.ta:hover{background:rgba(229,85,122,0.11)}
+.ta-dot{width:7px;height:7px;border-radius:50%;background:var(--tertiary);flex-shrink:0;animation:pulse 2s infinite}
+.fl{display:none;font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--t4);margin-bottom:6px;padding:0 8px}
+.mn{display:none;position:fixed;bottom:0;left:0;right:0;height:64px;z-index:90;background:rgba(8,8,12,0.96);border-top:1px solid var(--b2);justify-content:space-around;align-items:center}
+.mn-i{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--t3);padding:4px 12px;transition:color 0.15s;text-decoration:none}
+.mn-i.on{color:var(--primary)}
+.plat-pill{padding:6px 14px;border-radius:var(--r-full);font-size:12px;font-weight:600;border:1px solid var(--b1);color:var(--t2);transition:all 0.15s;cursor:pointer}
+.plat-pill.on{background:rgba(123,79,255,0.18);color:var(--primary);border-color:rgba(123,79,255,0.38)}
+.fl-label{display:block;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--t4);margin-bottom:6px}
+@media(max-width:767px){.mn{display:flex}.hide-m{display:none!important}}
+@media(max-width:1023px){#mmbtn{display:flex!important}#main-grid{grid-template-columns:1fr!important}}
+</style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<!-- AUTH -->
+<div id="auth" class="auth-hero">
+  <div style="position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(123,79,255,0.1),transparent);top:-150px;left:-100px;pointer-events:none"></div>
+  <div style="position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(229,85,122,0.07),transparent);bottom:-100px;right:-50px;pointer-events:none"></div>
+  <div style="position:relative;z-index:5;width:100%;max-width:380px;padding:0 20px">
+    <div style="text-align:center;margin-bottom:32px" class="anim-fade-up">
+      <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:18px">
+        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#7b4fff,#b89eff);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-glow)"><span class="icon" style="color:#fff;font-size:22px">auto_stories</span></div>
+        <div><div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.5px">StoryVital</div><div style="font-size:11px;color:var(--t3)">웹소설 작가의 워크스페이스</div></div>
+      </div>
+      <h1 style="font-size:28px;font-weight:800;color:#fff;line-height:1.3;margin-bottom:10px;letter-spacing:-0.5px">복선을 잊어버린 적<br/>있으신가요?</h1>
+      <p style="font-size:14px;color:var(--t2);line-height:1.65">연재 작가만을 위한 설정 관리 · 복선 트래커 · 내보내기.<br/>노션보다 가볍고, 스크리브너보다 직관적입니다.</p>
+    </div>
+    <div class="glass" style="border-radius:var(--r-xl);padding:24px;margin-bottom:16px" class="anim-fade-up d1">
+      <div style="margin-bottom:12px;text-align:left">
+        <label class="fl-label">필명 (작가명)</label>
+        <input id="ln-name" type="text" class="field" placeholder="예: 하경" onkeydown="if(event.key==='Enter')doLocalLogin()"/>
+      </div>
+      <button onclick="doLocalLogin()" class="btn btn-primary" style="width:100%;padding:13px;font-size:15px;margin-bottom:14px">시작하기 →</button>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><div style="flex:1;height:1px;background:var(--b1)"></div><span style="font-size:11px;color:var(--t4)">또는</span><div style="flex:1;height:1px;background:var(--b1)"></div></div>
+      <button id="gbtn" onclick="doGoogleSignIn()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#1a1a1a;border-radius:var(--r-md);padding:13px;font-weight:700;font-size:14px;transition:all 0.2s;cursor:pointer;border:none">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Google로 시작하기
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px" class="anim-fade-up d2">
+      <div class="glass" style="border-radius:var(--r-md);padding:12px;text-align:center"><div style="font-size:17px;font-weight:800;color:#fff;margin-bottom:2px">무료</div><div style="font-size:11px;color:var(--t3)">1작품</div></div>
+      <div class="glass" style="border-radius:var(--r-md);padding:12px;text-align:center"><div style="font-size:17px;font-weight:800;color:var(--primary);margin-bottom:2px">₩4,900</div><div style="font-size:11px;color:var(--t3)">Pro/월</div></div>
+      <div class="glass" style="border-radius:var(--r-md);padding:12px;text-align:center"><div style="font-size:17px;font-weight:800;color:var(--success);margin-bottom:2px">즉시</div><div style="font-size:11px;color:var(--t3)">설치 불필요</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ONBOARDING -->
+<div id="ob" style="display:none;min-height:100vh;align-items:center;justify-content:center;padding:20px">
+  <div style="width:100%;max-width:460px">
+    <div class="step-track"><div class="step-dot current" id="sd1"></div><div class="step-dot" id="sd2"></div><div class="step-dot" id="sd3"></div></div>
+    <!-- step 1 -->
+    <div id="obs1" class="ob-step active glass" style="border-radius:var(--r-2xl);padding:32px">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="width:60px;height:60px;border-radius:16px;background:linear-gradient(135deg,#7b4fff,#b89eff);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:var(--shadow-glow)"><span class="icon" style="font-size:26px;color:#fff">waving_hand</span></div>
+        <h2 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:8px">환영합니다, 작가님!</h2>
+        <p style="font-size:13px;color:var(--t2);line-height:1.65">StoryVital은 웹소설 연재를 위해 특별히 설계된 워크스페이스입니다.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--r-md);background:rgba(123,79,255,0.08);border:1px solid rgba(123,79,255,0.18)"><span class="icon" style="color:var(--primary);font-size:22px">group</span><div><div style="font-weight:700;font-size:13px;color:#fff">캐릭터 데이터베이스</div><div style="font-size:12px;color:var(--t3)">외모·성격·능력·관계 한 곳에</div></div></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--r-md);background:rgba(229,85,122,0.07);border:1px solid rgba(229,85,122,0.15)"><span class="icon" style="color:var(--tertiary);font-size:22px">commit</span><div><div style="font-weight:700;font-size:13px;color:#fff">복선 트래커</div><div style="font-size:12px;color:var(--t3)">투척한 복선을 절대 잊지 않도록</div></div></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--r-md);background:rgba(62,207,166,0.07);border:1px solid rgba(62,207,166,0.15)"><span class="icon" style="color:var(--success);font-size:22px">upload_file</span><div><div style="font-weight:700;font-size:13px;color:#fff">플랫폼 맞춤 내보내기</div><div style="font-size:12px;color:var(--t3)">문피아·네이버·카카오 원클릭 변환</div></div></div>
+      </div>
+      <button onclick="goS(2)" class="btn btn-primary" style="width:100%;padding:13px;font-size:15px">시작하기 →</button>
+    </div>
+    <!-- step 2 -->
+    <div id="obs2" class="ob-step glass" style="border-radius:var(--r-2xl);padding:32px">
+      <h2 style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px">첫 작품 만들기</h2>
+      <p style="font-size:13px;color:var(--t3);margin-bottom:20px">나중에 언제든 수정할 수 있어요.</p>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div><label class="fl-label">작품 제목 *</label><input id="ob-title" type="text" class="field" placeholder="예: 마법사의 귀환"/></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label class="fl-label">장르</label><select id="ob-genre" class="field"><option value="현대판타지">현대 판타지</option><option value="로맨스판타지">로맨스 판타지</option><option value="정통판타지">정통 판타지</option><option value="SF">SF</option><option value="무협">무협</option><option value="공포">공포/스릴러</option><option value="기타">기타</option></select></div>
+          <div><label class="fl-label">연재 상태</label><select id="ob-status" class="field"><option value="writing">집필 중</option><option value="planning">기획 단계</option><option value="hiatus">휴재 중</option></select></div>
+        </div>
+        <div>
+          <label class="fl-label">주요 플랫폼</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px" id="ob-plats">
+            <button onclick="togglePill(this)" class="plat-pill">📗 문피아</button>
+            <button onclick="togglePill(this)" class="plat-pill">💚 네이버 시리즈</button>
+            <button onclick="togglePill(this)" class="plat-pill">🟡 카카오페이지</button>
+            <button onclick="togglePill(this)" class="plat-pill">📘 조아라</button>
+          </div>
+        </div>
+        <div><label class="fl-label">일일 목표 (자)</label><input id="ob-goal" type="number" class="field" placeholder="5000"/></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button onclick="goS(1)" class="btn btn-ghost">이전</button>
+        <button onclick="finishOb()" class="btn btn-primary" style="flex:1;padding:13px">작품 만들기 →</button>
+      </div>
+      <button onclick="skipOb()" style="width:100%;text-align:center;margin-top:10px;font-size:12px;color:var(--t4);cursor:pointer;background:none;border:none">건너뛰기</button>
+    </div>
+    <!-- step 3 -->
+    <div id="obs3" class="ob-step glass" style="border-radius:var(--r-2xl);padding:32px;text-align:center">
+      <div style="width:60px;height:60px;border-radius:50%;background:rgba(62,207,166,0.15);border:2px solid var(--success);display:flex;align-items:center;justify-content:center;margin:0 auto 14px"><span class="icon" style="font-size:26px;color:var(--success)">check</span></div>
+      <h2 style="font-size:20px;font-weight:800;color:#fff;margin-bottom:8px">준비 완료!</h2>
+      <p style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:20px">작품이 생성됐어요. 캐릭터를 추가하거나 챕터를 기록해보세요.</p>
+      <button onclick="enterApp()" class="btn btn-primary" style="width:100%;padding:13px;font-size:15px">대시보드로 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <!-- TOPNAV -->
+  <nav class="topnav">
+    <div style="display:flex;align-items:center;gap:14px">
+      <button id="mmbtn" onclick="openMD()" class="btn btn-icon btn-ghost" style="display:none"><span class="icon">menu</span></button>
+      <a href="index.html" style="display:flex;align-items:center;gap:8px">
+        <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#7b4fff,#b89eff);display:flex;align-items:center;justify-content:center"><span class="icon" style="font-size:15px;color:#fff">auto_stories</span></div>
+        <span style="font-weight:800;font-size:15px;color:#fff;letter-spacing:-0.3px" class="hide-m">StoryVital</span>
+      </a>
+      <div style="display:flex;gap:18px;font-size:13px;font-weight:500" class="hide-m">
+        <a href="index.html" style="color:var(--primary);font-weight:700">대시보드</a>
+        <a href="characters.html" style="color:var(--t2);transition:color .15s" onmouseover="this.style.color='var(--t1)'" onmouseout="this.style.color='var(--t2)'">캐릭터</a>
+        <a href="relations.html" style="color:var(--t2);transition:color .15s" onmouseover="this.style.color='var(--t1)'" onmouseout="this.style.color='var(--t2)'">관계도</a>
+        <a href="chapters.html" style="color:var(--t2);transition:color .15s" onmouseover="this.style.color='var(--t1)'" onmouseout="this.style.color='var(--t2)'">챕터 트래커</a>
+        <a href="export.html" style="color:var(--t2);transition:color .15s" onmouseover="this.style.color='var(--t1)'" onmouseout="this.style.color='var(--t2)'">내보내기</a>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <!-- Work switcher -->
+      <div style="position:relative" id="wsw">
+        <div class="ws-btn" onclick="toggleWD()">
+          <span class="icon icon-sm" style="color:var(--primary)">book</span>
+          <span style="font-size:12px;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" id="wlabel">로딩중...</span>
+          <span class="icon icon-sm" style="color:var(--t3)" id="wchev">expand_more</span>
+        </div>
+        <div class="ws-dd" id="wdd">
+          <div id="wdd-items"></div>
+          <div style="padding:8px"><button onclick="openNWM()" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r-sm);font-size:12px;color:var(--t2);cursor:pointer;background:none;border:none;font-weight:600;transition:background 0.1s" onmouseover="this.style.background='rgba(123,79,255,0.1)'" onmouseout="this.style.background=''"><span class="icon icon-sm">add</span>새 작품 추가</button></div>
+        </div>
+      </div>
+      <a href="pricing.html" id="upbtn" class="badge badge-pro hide-m" style="cursor:pointer;padding:5px 12px">✦ Pro 업그레이드</a>
+      <button class="btn btn-icon btn-ghost" onclick="openSpM()"><span class="icon" style="color:var(--t2)">timer</span></button>
+      <img id="uav" src="" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1.5px solid rgba(123,79,255,0.5);cursor:pointer" onclick="toggleUM()"/>
+    </div>
+  </nav>
+
+  <!-- USER MENU -->
+  <div id="umenu" style="display:none;position:fixed;top:68px;right:16px;z-index:500;background:var(--s3);border:1px solid var(--b1);border-radius:var(--r-lg);padding:8px;min-width:200px;box-shadow:var(--shadow-md)">
+    <div style="padding:8px 10px 12px;border-bottom:1px solid var(--b2);margin-bottom:6px">
+      <div style="font-size:13px;font-weight:700;color:#fff" id="um-name">-</div>
+      <div style="font-size:11px;color:var(--t3)" id="um-email">-</div>
+      <div class="badge badge-outline" id="um-plan" style="margin-top:6px;display:inline-flex">무료 플랜</div>
+    </div>
+    <a href="pricing.html" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r-sm);font-size:13px;color:var(--primary);font-weight:600;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='rgba(123,79,255,0.1)'" onmouseout="this.style.background=''"><span class="icon icon-sm">star</span>Pro 업그레이드</a>
+    <button onclick="doSignOut()" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r-sm);font-size:13px;color:var(--t2);cursor:pointer;background:none;border:none;transition:background 0.1s" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background=''"><span class="icon icon-sm">logout</span>로그아웃</button>
+  </div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div style="padding:0 4px 12px;border-bottom:1px solid var(--b2);margin-bottom:10px">
+      <div class="fl">현재 작품</div>
+      <div style="padding:10px;border-radius:var(--r-md);background:rgba(123,79,255,0.06);border:1px solid rgba(123,79,255,0.12)">
+        <div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" id="sb-wname">-</div>
+        <div style="font-size:10px;color:var(--t3)" id="sb-wstat">-</div>
+        <div class="progress-track" style="margin-top:8px"><div class="progress-fill" id="sb-prog" style="width:0%"></div></div>
+      </div>
+    </div>
+    <a href="index.html" class="sidebar-link active"><span class="icon icon-sm">dashboard</span>대시보드</a>
+    <a href="characters.html" class="sidebar-link"><span class="icon icon-sm">group</span>캐릭터 DB<span id="sb-cc" style="margin-left:auto;font-size:10px;color:var(--t3)"></span></a>
+    <a href="relations.html" class="sidebar-link"><span class="icon icon-sm">hub</span>관계도</a>
+    <a href="chapters.html" class="sidebar-link"><span class="icon icon-sm">format_list_bulleted</span>챕터 트래커<span id="sb-tc" style="margin-left:auto;font-size:10px;color:var(--tertiary)"></span></a>
+    <a href="export.html" class="sidebar-link"><span class="icon icon-sm">upload_file</span>내보내기</a>
+    <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--b2)">
+      <a href="pricing.html" class="sidebar-link" style="color:var(--primary)"><span class="icon icon-sm">star</span>Pro 업그레이드</a>
+      <button onclick="doSignOut()" class="sidebar-link" style="width:100%;background:none;border:none;text-align:left"><span class="icon icon-sm">logout</span><span id="sb-un">로그아웃</span></button>
+    </div>
+  </aside>
+
+  <!-- Mobile drawer overlay -->
+  <div id="mdo" onclick="closeMD()" style="display:none;position:fixed;inset:0;z-index:88;background:rgba(0,0,0,0.6);backdrop-filter:blur(3px)"></div>
+  <div id="mdd" style="position:fixed;left:-280px;top:0;bottom:0;width:280px;z-index:89;background:var(--s1);border-right:1px solid var(--b1);padding:80px 12px 24px;flex-direction:column;transition:left 0.3s var(--ease);display:flex">
+    <a href="index.html" class="sidebar-link active"><span class="icon icon-sm">dashboard</span>대시보드</a>
+    <a href="characters.html" class="sidebar-link"><span class="icon icon-sm">group</span>캐릭터 DB</a>
+    <a href="relations.html" class="sidebar-link"><span class="icon icon-sm">hub</span>관계도</a>
+    <a href="chapters.html" class="sidebar-link"><span class="icon icon-sm">format_list_bulleted</span>챕터 트래커</a>
+    <a href="export.html" class="sidebar-link"><span class="icon icon-sm">upload_file</span>내보내기</a>
+    <a href="pricing.html" class="sidebar-link" style="color:var(--primary);margin-top:auto"><span class="icon icon-sm">star</span>Pro 업그레이드</a>
+    <button onclick="doSignOut()" class="sidebar-link" style="width:100%;background:none;border:none;text-align:left"><span class="icon icon-sm">logout</span>로그아웃</button>
+  </div>
+
+  <!-- MAIN -->
+  <main class="main" style="padding:24px 28px;max-width:1200px">
+
+    <!-- Welcome banner -->
+    <section style="border-radius:var(--r-xl);background:var(--s3);border:1px solid var(--b1);padding:24px 28px;margin-bottom:18px;position:relative;overflow:hidden" class="anim-fade-up">
+      <div style="position:absolute;right:0;top:0;width:280px;height:100%;background:radial-gradient(ellipse at right,rgba(123,79,255,0.07),transparent);pointer-events:none"></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;position:relative">
+        <div style="flex:1">
+          <div style="font-size:12px;color:var(--t3);margin-bottom:4px" id="greet">오늘도 집필 중이시군요 ✍️</div>
+          <h1 style="font-size:24px;font-weight:800;color:#fff;margin-bottom:14px;letter-spacing:-0.5px">안녕하세요, <span id="wname">작가님</span>.</h1>
+          <div style="margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+              <span style="font-size:12px;color:var(--t3)">오늘 목표</span>
+              <span style="font-size:13px;font-weight:700;color:#fff"><span id="tw">0</span> / <span id="tg">5,000</span>자</span>
+            </div>
+            <div class="progress-track" style="height:6px;max-width:360px"><div class="progress-fill" id="tbar" style="width:0%"></div></div>
+            <div style="font-size:11px;margin-top:3px;color:var(--success)" id="tpct">0% 달성</div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:18px;margin-bottom:16px">
+            <div><div style="font-size:10px;color:var(--t4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">연속 기록</div><div style="font-size:20px;font-weight:800;color:#fff"><span id="snum">0</span>일</div></div>
+            <div><div style="font-size:10px;color:var(--t4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">미회수 복선</div><div style="font-size:20px;font-weight:800;color:var(--tertiary)" id="unum">-</div></div>
+            <div><div style="font-size:10px;color:var(--t4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">등록 캐릭터</div><div style="font-size:20px;font-weight:800;color:#fff" id="cnum">-</div></div>
+            <div><div style="font-size:10px;color:var(--t4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">총 회차</div><div style="font-size:20px;font-weight:800;color:#fff" id="chnum">-</div></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <a href="chapters.html" class="btn btn-primary"><span class="icon icon-sm">edit</span>이어서 집필</a>
+            <button onclick="openSpM()" class="btn btn-secondary"><span class="icon icon-sm">timer</span>스프린트</button>
+            <a href="export.html" class="btn btn-ghost hide-m"><span class="icon icon-sm">upload_file</span>내보내기</a>
+          </div>
+        </div>
+        <div style="flex-shrink:0;text-align:center" class="hide-m">
+          <div style="position:relative;width:100px;height:100px">
+            <svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"/>
+              <circle id="marc" cx="50" cy="50" r="40" fill="none" stroke="var(--primary-dim)" stroke-width="8" stroke-dasharray="251.3" stroke-dashoffset="251.3" stroke-linecap="round" style="filter:drop-shadow(0 0 6px rgba(123,79,255,0.7));transition:stroke-dashoffset 1.2s var(--ease)"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <span style="font-size:17px;font-weight:800;color:#fff" id="mpct">0%</span>
+              <span style="font-size:10px;color:var(--t3)">완성</span>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--t3);margin-top:6px" id="mlabel">진행도</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Streak calendar -->
+    <section style="border-radius:var(--r-xl);background:var(--s3);border:1px solid var(--b1);padding:18px 24px;margin-bottom:18px" class="anim-fade-up d1">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px"><span class="icon icon-sm" style="color:var(--primary)">local_fire_department</span><span style="font-size:14px;font-weight:700;color:#fff">기록 스트릭</span><span style="font-size:11px;color:var(--t3)">· 최근 10주 · 캐릭터·회차·복선·집필량, 무엇이든 기록한 날이 채워집니다</span></div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--t3)">
+          <span style="display:flex;align-items:center;gap:4px"><span class="streak-cell"></span>기록 없음</span>
+          <span style="display:flex;align-items:center;gap:4px"><span class="streak-cell" data-level="3"></span>기록한 날</span>
+        </div>
+      </div>
+      <div id="scal" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--b2)">
+        <span class="icon icon-sm" style="color:var(--t3)">edit_note</span>
+        <span style="font-size:13px;color:var(--t3)">오늘 집필량</span>
+        <input id="tci" type="number" class="field" style="max-width:100px;padding:7px 10px;font-size:13px" placeholder="0" min="0"/>
+        <span style="font-size:13px;color:var(--t3)">자</span>
+        <button onclick="saveDay()" class="btn btn-secondary btn-sm">저장</button>
+        <span id="saved-hint" style="font-size:12px;color:var(--success);display:none">✓ 저장됨</span>
+      </div>
+    </section>
+
+    <!-- Works + Threads -->
+    <div id="main-grid" style="display:grid;grid-template-columns:1fr 310px;gap:16px;margin-bottom:18px">
+      <div class="anim-fade-up d2">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <h2 style="font-size:14px;font-weight:700;color:#fff">내 작품</h2>
+          <button onclick="openNWM()" class="btn btn-secondary btn-sm"><span class="icon icon-sm">add</span>새 작품</button>
+        </div>
+        <div id="wgrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:10px"></div>
+      </div>
+      <div class="anim-fade-up d3">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <h2 style="font-size:14px;font-weight:700;color:#fff;display:flex;align-items:center;gap:5px"><span class="icon icon-sm" style="color:var(--tertiary)">warning</span>미회수 복선</h2>
+          <span class="badge badge-pink" id="tbadge">0개</span>
+        </div>
+        <div id="tpanel"></div>
+        <a href="chapters.html" style="display:block;text-align:center;margin-top:10px;font-size:12px;color:var(--t3);transition:color 0.15s" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--t3)'">트래커에서 관리 →</a>
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <section style="border-radius:var(--r-xl);background:var(--s3);border:1px solid var(--b1);padding:18px 24px" class="anim-fade-up d4">
+      <h2 style="font-size:14px;font-weight:700;color:#fff;margin-bottom:14px;display:flex;align-items:center;gap:6px"><span class="icon icon-sm" style="color:var(--primary)">history</span>최근 활동</h2>
+      <div id="actpanel"><div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">아직 활동 기록이 없습니다.</div></div>
+    </section>
+  </main>
+
+  <!-- Mobile bottom nav -->
+  <nav class="mn">
+    <a href="index.html" class="mn-i on"><span class="icon" style="font-size:22px">dashboard</span>홈</a>
+    <a href="characters.html" class="mn-i"><span class="icon" style="font-size:22px">group</span>캐릭터</a>
+    <a href="relations.html" class="mn-i"><span class="icon" style="font-size:22px">hub</span>관계도</a>
+    <a href="chapters.html" class="mn-i"><span class="icon" style="font-size:22px">auto_stories</span>챕터</a>
+    <a href="export.html" class="mn-i"><span class="icon" style="font-size:22px">upload_file</span>내보내기</a>
+  </nav>
+</div>
+
+<!-- Sprint modal -->
+<div id="spm" class="overlay" onclick="if(event.target===this)closeSp()">
+  <div class="modal" style="max-width:320px;text-align:center" onclick="event.stopPropagation()">
+    <h2 style="font-size:17px;font-weight:800;color:#fff;margin-bottom:18px">집필 스프린트</h2>
+    <div style="position:relative;width:130px;height:130px;margin:0 auto 18px">
+      <svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)">
+        <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="6"/>
+        <circle id="spring" cx="50" cy="50" r="44" fill="none" stroke="var(--primary-dim)" stroke-width="6" stroke-dasharray="276.5" stroke-dashoffset="0" stroke-linecap="round" style="filter:drop-shadow(0 0 8px rgba(123,79,255,0.8));transition:stroke-dashoffset 1s linear"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <span style="font-size:30px;font-weight:800;color:#fff;letter-spacing:-1px" id="sptime">25:00</span>
+        <span style="font-size:10px;color:var(--t3)">남은 시간</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      <button onclick="setSD(15)" class="btn btn-ghost btn-sm" style="flex:1" id="sp15">15분</button>
+      <button onclick="setSD(25)" class="btn btn-secondary btn-sm" style="flex:1;border-color:rgba(123,79,255,0.4)" id="sp25">25분</button>
+      <button onclick="setSD(50)" class="btn btn-ghost btn-sm" style="flex:1" id="sp50">50분</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeSp()" class="btn btn-ghost" style="flex:1">닫기</button>
+      <button onclick="toggleSp()" class="btn btn-primary" style="flex:1" id="spbtn">시작</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Work modal -->
+<div id="nwm" class="overlay" onclick="if(event.target===this)closeNWM()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <h2 style="font-size:17px;font-weight:800;color:#fff" id="nwm-title">새 작품 추가</h2>
+      <button onclick="closeNWM()" class="btn btn-icon btn-ghost"><span class="icon">close</span></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="fl-label">작품 제목 *</label><input id="nwt" type="text" class="field" placeholder="예: 검의 신 2권"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="fl-label">장르</label><select id="nwg" class="field"><option value="현대판타지">현대 판타지</option><option value="로맨스판타지">로맨스 판타지</option><option value="정통판타지">정통 판타지</option><option value="SF">SF</option><option value="무협">무협</option><option value="공포">공포/스릴러</option><option value="기타">기타</option></select></div>
+        <div><label class="fl-label">상태</label><select id="nws" class="field"><option value="writing">집필 중</option><option value="planning">기획 단계</option><option value="hiatus">휴재 중</option></select></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="fl-label">일일 목표 (자)</label><input id="nwgl" type="number" class="field" placeholder="5000"/></div>
+        <div><label class="fl-label">진행도 (%)</label><input id="nwp" type="number" min="0" max="100" class="field" placeholder="0"/></div>
+      </div>
+      <input type="hidden" id="nw-edit-id"/>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button onclick="deleteWork()" id="nwm-del" class="btn btn-ghost" style="display:none;color:var(--tertiary);border-color:rgba(229,85,122,0.3)"><span class="icon icon-sm">delete</span></button>
+      <button onclick="closeNWM()" class="btn btn-ghost" style="flex:1">취소</button>
+      <button onclick="createWork()" id="nwm-submit" class="btn btn-primary" style="flex:1">생성</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// firebase.js는 동적 로드 — file:// 로 열거나 오프라인이어도 필명 로그인/로컬 모드는 정상 동작
+let FB = null;
+try { FB = await import('./firebase.js'); }
+catch(e) { console.warn('firebase.js 로드 실패 — 로컬 모드로 동작합니다:', e.message); }
+
+const S = { uid:null, user:null, works:[], activeId:null, chars:[], chapters:[], threads:[], stats:[], todayChars:0, dailyGoal:5000, streak:0, sub:{plan:'free'}, isDemo:false };
+
+// ── 로컬 프로필 (Firebase 미설정 시 기본 로그인 수단) ──
+const readJ=(k,fb)=>{try{const v=JSON.parse(localStorage.getItem(k)||'null');return v==null?fb:v;}catch(e){return fb;}};
+const localUser=()=>readJ('sv_user',null);
+const ldate=d=>{const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());};
+function markRecordDay(){const d=readJ('sv_record_days',{});d[ldate(new Date())]=1;localStorage.setItem('sv_record_days',JSON.stringify(d));}
+function saveWorksLocal(){ if(!S.uid) localStorage.setItem('sv_works',JSON.stringify(S.works)); }
+function setActiveWork(id){ localStorage.setItem('sv_activeWork',id); const w=S.works.find(x=>x.id===id); if(w)localStorage.setItem('sv_workName',w.title); }
+// 작품 생성 전 'default' 키로 저장된 캐릭터/회차를 새 작품으로 이전 (데이터 실종 방지)
+function migrateDefaultTo(id){ ['sv_chars_','sv_chapters_','sv_threads_'].forEach(pre=>{ const o=localStorage.getItem(pre+'default'); if(o && !localStorage.getItem(pre+id)){ localStorage.setItem(pre+id,o); localStorage.removeItem(pre+'default'); } }); }
+function syncLocalData(){
+  const id=S.activeId;
+  const arr=k=>{const v=readJ(k,[]);return Array.isArray(v)?v:[];};
+  S.chars=arr('sv_chars_'+id);
+  S.chapters=arr('sv_chapters_'+id);
+  const cm={}; S.chapters.forEach(c=>{cm[c.id]=c.num;});
+  S.threads=arr('sv_threads_'+id).map(t=>({...t,chapterNum:t.chapterNum||cm[t.chapterId]||''}));
+  const stats=readJ('sv_stats',{});
+  S.todayChars=stats[ldate(new Date())]?.chars||0;
+  const tci=document.getElementById('tci'); if(tci)tci.value=S.todayChars||'';
+}
+function loadLocalApp(u){
+  S.uid=null; S.user={displayName:u.name}; S.sub={plan:'free'};
+  S.works=readJ('sv_works',[]);
+  if(!Array.isArray(S.works))S.works=[];
+  if(!S.works.length){ showOb(u); return; }
+  const saved=localStorage.getItem('sv_activeWork');
+  S.activeId=S.works.find(w=>w.id===saved)?saved:S.works[0].id;
+  setActiveWork(S.activeId);
+  S.dailyGoal=S.works.find(w=>w.id===S.activeId)?.dailyGoal||5000;
+  syncLocalData();
+  showApp({displayName:u.name,email:'로컬 저장 모드',photoURL:''});
+}
+window.doLocalLogin=()=>{
+  const name=document.getElementById('ln-name').value.trim();
+  if(!name){toast('필명을 입력해주세요','error');document.getElementById('ln-name').focus();return;}
+  localStorage.setItem('sv_user',JSON.stringify({name,createdAt:new Date().toISOString()}));
+  appBooted=true;
+  loadLocalApp({name});
+  toast(name+'님, 환영합니다! ✍️','success');
+};
+
+// 부트: 로컬 프로필이 있으면 즉시 대시보드 (로그인 화면으로 튀기지 않음)
+let appBooted=false;
+{ const bu=localUser(); if(bu){ appBooted=true; loadLocalApp(bu); } }
+// Firebase 미연동이면 Google 버튼에 표시
+if(!FB || !FB.isConfigured){ const g=document.getElementById('gbtn'); if(g){ g.style.opacity='0.55'; g.title='Firebase 연동 후 사용 가능 (docs/FIREBASE_SETUP.md)'; } }
+if((!FB || !FB.isConfigured) && !appBooted){ showAuth(); }
+
+if (FB && FB.isConfigured) try { FB.onAuth(async user => {
+  if (user) {
+    S.uid = user.uid; S.user = user;
+    try {
+      const [works, sub, profile] = await Promise.all([FB.getWorks(user.uid), FB.getSubscription(user.uid), FB.getProfile(user.uid)]);
+      S.works = works; S.sub = sub;
+      S.dailyGoal = profile?.dailyGoal || 5000;
+      const saved = localStorage.getItem('sv_aw_'+user.uid);
+      S.activeId = saved && works.find(w=>w.id===saved) ? saved : works[0]?.id;
+      if (!works.length) { showOb(user); return; }
+      if (sub.plan==='pro') document.getElementById('upbtn').style.display='none';
+      const [chars, chapters, threads, stats] = await Promise.all([FB.getCharacters(user.uid, S.activeId), FB.getChapters(user.uid, S.activeId), FB.getThreads(user.uid, S.activeId), FB.getStats(user.uid)]);
+      S.chars=chars; S.chapters=chapters; S.threads=threads; S.stats=stats;
+      const td = stats.find(s=>s.date===todayStr());
+      S.todayChars = td?.chars||0;
+      document.getElementById('tci').value = S.todayChars||'';
+      showApp(user);
+    } catch(e) { console.warn('Firebase error:',e.message); if(!appBooted){const u=localUser(); u?loadLocalApp(u):showAuth();} }
+  } else if (!appBooted) { showAuth(); }
+}); } catch(e) { console.warn('Auth 구독 실패:', e.message); if(!appBooted){ const u=localUser(); u?loadLocalApp(u):showAuth(); } }
+
+window.doGoogleSignIn = async()=>{
+  if(!FB){ toast('Firebase \ubaa8\ub4c8\uc744 \ubd88\ub7ec\uc62c \uc218 \uc5c6\uc5b4\uc694. \ub85c\uceec \uc11c\ubc84(http)\ub85c \uc2e4\ud589\ud574\uc57c \ud569\ub2c8\ub2e4 \u2014 docs/FIREBASE_SETUP.md \ucc38\uace0','error'); return; }
+  if(!FB.isConfigured){ toast('Firebase\uac00 \uc544\uc9c1 \uc5f0\ub3d9\ub418\uc9c0 \uc54a\uc558\uc5b4\uc694. docs/FIREBASE_SETUP.md \ub300\ub85c \ud0a4\ub97c \ub123\uc73c\uba74 \ud65c\uc131\ud654\ub429\ub2c8\ub2e4. \uc9c0\uae08\uc740 \ud544\uba85\uc73c\ub85c \uc2dc\uc791\ud574 \uc8fc\uc138\uc694.','error'); return; }
+  const g=document.getElementById('gbtn'); const orig=g.innerHTML; g.textContent='\ub85c\uadf8\uc778 \uc911...';
+  try{ await FB.signInGoogle(); }
+  catch(e){ g.innerHTML=orig; toast('\ub85c\uadf8\uc778 \uc2e4\ud328: '+(e.message||e.code||''),'error'); }
+};
+window.doSignOut = async()=>{ if(!confirm('로그아웃할까요? 데이터는 이 브라우저에 안전하게 남아있어요.'))return; localStorage.removeItem('sv_user'); try{if(FB)await FB.signOutUser();}catch(e){} location.reload(); };
+function showAuth(){ document.getElementById('auth').style.display='flex'; document.getElementById('ob').style.display='none'; document.getElementById('app').style.display='none'; }
+function showOb(user){ document.getElementById('auth').style.display='none'; document.getElementById('ob').style.display='flex'; document.getElementById('app').style.display='none'; }
+function showApp(user){
+  document.getElementById('auth').style.display='none'; document.getElementById('ob').style.display='none'; document.getElementById('app').style.display='block';
+  const n=(user?.displayName||'작가').split(' ')[0];
+  document.getElementById('wname').textContent=n+'님'; document.getElementById('sb-un').textContent=n;
+  document.getElementById('um-name').textContent=user?.displayName||'작가'; document.getElementById('um-email').textContent=user?.email||'로컬 저장 모드';
+  const av=user?.photoURL||`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(n)}&backgroundColor=7b4fff&textColor=ffffff`;
+  document.getElementById('uav').src=av;
+  const h=new Date().getHours();
+  document.getElementById('greet').textContent=h<12?'좋은 아침입니다 ☀️':h<18?'오늘도 열심히 집필 중이시군요 ✍️':'오늘 마지막 스퍼트 🌙';
+  renderAll();
+}
+
+function renderAll(){ renderWS(); renderSB(); renderWG(); renderTP(); renderSC(); renderStats(); renderAct(); }
+
+function renderWS(){
+  const w=S.works.find(x=>x.id===S.activeId)||S.works[0]; if(!w)return;
+  document.getElementById('wlabel').textContent=w.title;
+  const items=document.getElementById('wdd-items');
+  items.innerHTML=S.works.map(wk=>`<div class="ws-opt${wk.id===S.activeId?' cur':''}" onclick="switchWork('${wk.id}')"><div style="font-size:13px;font-weight:600;color:${wk.id===S.activeId?'var(--primary)':'var(--t1)'}">${wk.title}</div><div style="font-size:11px;color:var(--t3)">${wk.genre||''}</div></div>`).join('');
+}
+function renderSB(){
+  const w=S.works.find(x=>x.id===S.activeId); if(!w)return;
+  const ST={writing:'집필 중',planning:'기획 단계',hiatus:'휴재 중',done:'완결'};
+  document.getElementById('sb-wname').textContent=w.title; document.getElementById('sb-wstat').textContent=ST[w.status]||'';
+  document.getElementById('sb-prog').style.width=(w.progress||0)+'%';
+  const uc=S.threads.filter(t=>t.status!=='resolved').length;
+  document.getElementById('sb-cc').textContent=S.chars.filter(Boolean).length||'';
+  document.getElementById('sb-tc').textContent=uc?'⚠ '+uc:'';
+}
+function renderWG(){
+  const g=document.getElementById('wgrid');
+  const ST={writing:'badge-green',planning:'badge-amber',hiatus:'badge-outline',done:'badge-purple'};
+  const SL={writing:'집필 중',planning:'기획',hiatus:'휴재',done:'완결'};
+  g.innerHTML=S.works.map(w=>`<div class="glass-card pointer" onclick="switchWork('${w.id}')" style="padding:14px;${w.id===S.activeId?'border-color:rgba(123,79,255,0.4);background:rgba(123,79,255,0.06)':''}"><div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px"><div style="width:34px;height:34px;border-radius:8px;background:${w.color||'#7b4fff'}20;border:1px solid ${w.color||'#7b4fff'}30;display:flex;align-items:center;justify-content:center"><span class="icon icon-sm" style="color:${w.color||'#7b4fff'}">auto_stories</span></div><div style="display:flex;align-items:center;gap:6px"><span class="badge ${ST[w.status||'writing']}">${SL[w.status||'writing']}</span><button onclick="event.stopPropagation();openEditWork('${w.id}')" title="작품 수정" class="icon icon-sm" style="background:none;border:none;cursor:pointer;color:var(--t4);padding:2px" onmouseover="this.style.color='var(--t1)'" onmouseout="this.style.color='var(--t4)'">edit</button></div></div><div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${w.title}</div><div style="font-size:11px;color:var(--t3);margin-bottom:8px">${w.genre||''}</div><div><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px"><span style="color:var(--t4)">진행도</span><span style="font-weight:700;color:${w.color||'var(--primary)'}">${w.progress||0}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${w.progress||0}%;background:linear-gradient(90deg,${w.color||'var(--primary-dim)'},${w.color||'var(--primary)'})"></div></div></div></div>`).join('')+`<div onclick="openNWM()" style="border:2px dashed var(--b1);border-radius:var(--r-lg);padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.2s;min-height:130px" onmouseover="this.style.borderColor='rgba(184,158,255,0.3)'" onmouseout="this.style.borderColor='var(--b1)'"><span class="icon icon-lg" style="color:var(--t4);margin-bottom:4px">add</span><span style="font-size:11px;color:var(--t4)">새 작품</span></div>`;
+}
+function renderTP(){
+  const p=document.getElementById('tpanel');
+  const ut=S.threads.filter(t=>t.status!=='resolved');
+  document.getElementById('unum').textContent=ut.length; document.getElementById('tbadge').textContent=ut.length+'개';
+  if(!ut.length){p.innerHTML='<div style="text-align:center;padding:18px;color:var(--t3);font-size:12px"><span class="icon icon-lg" style="display:block;margin-bottom:4px;color:var(--success)">check_circle</span>미회수 복선 없음 🎉</div>';return;}
+  p.innerHTML=ut.slice(0,5).map(t=>`<div class="ta" onclick="location.href='chapters.html'"><div class="ta-dot"></div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${t.title}</div><div style="font-size:10px;color:var(--t3)">${t.chapterNum?t.chapterNum+'화':''}${t.daysAgo?' · D+'+t.daysAgo:''}</div></div><span class="badge ${t.status==='planted'?'badge-pink':'badge-purple'}" style="flex-shrink:0">${t.status==='planted'?'투척됨':'전개중'}</span></div>`).join('');
+}
+function renderSC(){
+  // 기록 스트릭: 캐릭터·회차·복선·집필량 등 무엇이든 기록한 날 기준
+  const cal=document.getElementById('scal');
+  const days=readJ('sv_record_days',{});
+  const stats=readJ('sv_stats',{});
+  const today=new Date(); const cells=[];
+  for(let i=69;i>=0;i--){
+    const d=new Date(today);d.setDate(d.getDate()-i);
+    const ds=ldate(d); const isT=i===0;
+    const rec=!!days[ds]; const chars=stats[ds]?.chars||0;
+    cells.push(`<div class="streak-cell${isT?' today':''}" data-level="${rec?3:0}" title="${ds}${rec?(chars?' · '+chars.toLocaleString()+'자 집필':' · 기록함'):' · 기록 없음'}"></div>`);
+  }
+  cal.innerHTML=cells.join('');
+  let streak=0; const d=new Date(today);
+  if(!days[ldate(d)]) d.setDate(d.getDate()-1); // 오늘 아직 기록 전이면 어제까지의 연속 표시
+  while(days[ldate(d)]){streak++;d.setDate(d.getDate()-1);}
+  S.streak=streak; document.getElementById('snum').textContent=streak;
+}
+function renderStats(){
+  const g=S.dailyGoal; const w=S.todayChars; const p=Math.min(100,Math.round(w/g*100));
+  document.getElementById('tw').textContent=w.toLocaleString(); document.getElementById('tg').textContent=g.toLocaleString();
+  document.getElementById('tbar').style.width=p+'%'; document.getElementById('tpct').textContent=p+'% 달성'+(p>=100?' 🎉':'');
+  document.getElementById('cnum').textContent=S.chars.filter(Boolean).length;
+  document.getElementById('chnum').textContent=S.chapters.filter(Boolean).length;
+  const wk=S.works.find(x=>x.id===S.activeId); const prog=wk?.progress||0;
+  document.getElementById('mpct').textContent=prog+'%'; document.getElementById('mlabel').textContent=wk?.title||'';
+  document.getElementById('marc').style.strokeDashoffset=251.3-(251.3*prog/100);
+}
+function renderAct(){
+  const panel=document.getElementById('actpanel');
+  const acts=JSON.parse(localStorage.getItem('sv_act_'+(S.uid||'demo'))||'[]');
+  if(!acts.length)return;
+  panel.innerHTML=acts.slice(0,6).map(a=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--b3)"><div style="width:7px;height:7px;border-radius:50%;background:${a.color||'var(--primary)'};margin-top:5px;flex-shrink:0"></div><div style="flex:1"><div style="font-size:13px;color:var(--t1)">${a.text}</div><div style="font-size:11px;color:var(--t3)">${a.time}</div></div></div>`).join('');
+}
+function logAct(text,color='var(--primary)'){const k='sv_act_'+(S.uid||'demo');const a=JSON.parse(localStorage.getItem(k)||'[]');a.unshift({text,color,time:new Date().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})});localStorage.setItem(k,JSON.stringify(a.slice(0,20)));renderAct();}
+
+window.switchWork=async(id)=>{ closeWD(); if(id===S.activeId)return; S.activeId=id; setActiveWork(id); if(S.uid&&FB){localStorage.setItem('sv_aw_'+S.uid,id);const [c,ch,t]=await Promise.all([FB.getCharacters(S.uid,id),FB.getChapters(S.uid,id),FB.getThreads(S.uid,id)]);S.chars=c;S.chapters=ch;S.threads=t;} else { syncLocalData(); } renderAll(); logAct("'"+S.works.find(w=>w.id===id)?.title+"' 작품으로 전환"); };
+window.toggleWD=()=>{const d=document.getElementById('wdd');const c=document.getElementById('wchev');const o=d.classList.contains('open');d.classList.toggle('open',!o);c.textContent=!o?'expand_less':'expand_more';};
+window.closeWD=()=>{document.getElementById('wdd').classList.remove('open');document.getElementById('wchev').textContent='expand_more';};
+document.addEventListener('click',e=>{if(!document.getElementById('wsw').contains(e.target))closeWD();if(!document.getElementById('uav').contains(e.target)&&!document.getElementById('umenu').contains(e.target))document.getElementById('umenu').style.display='none';});
+
+window.toggleUM=()=>{const m=document.getElementById('umenu');m.style.display=m.style.display==='none'?'block':'none';};
+window.openNWM=()=>{ closeWD(); if(S.sub.plan==='free'&&S.works.length>=1){toast('무료 플랜은 1작품까지. Pro로 업그레이드하세요!','error');setTimeout(()=>location.href='pricing.html',1600);return;}
+  document.getElementById('nw-edit-id').value='';
+  document.getElementById('nwm-title').textContent='새 작품 추가';
+  document.getElementById('nwm-submit').textContent='생성';
+  document.getElementById('nwm-del').style.display='none';
+  document.getElementById('nwt').value=''; document.getElementById('nwgl').value=''; document.getElementById('nwp').value='';
+  document.getElementById('nwm').classList.add('open'); };
+
+window.openEditWork=(id)=>{ closeWD();
+  const w=S.works.find(x=>x.id===id); if(!w)return;
+  document.getElementById('nw-edit-id').value=id;
+  document.getElementById('nwm-title').textContent="'"+w.title+"' 수정";
+  document.getElementById('nwm-submit').textContent='저장';
+  document.getElementById('nwm-del').style.display='flex';
+  document.getElementById('nwt').value=w.title;
+  document.getElementById('nwg').value=w.genre||'현대판타지';
+  document.getElementById('nws').value=w.status||'writing';
+  document.getElementById('nwgl').value=w.dailyGoal||'';
+  document.getElementById('nwp').value=w.progress||0;
+  document.getElementById('nwm').classList.add('open'); };
+
+window.deleteWork=async()=>{
+  const id=document.getElementById('nw-edit-id').value; if(!id)return;
+  const w=S.works.find(x=>x.id===id); if(!w)return;
+  const nChars=(readJ('sv_chars_'+id,[])||[]).length, nCh=(readJ('sv_chapters_'+id,[])||[]).length;
+  const extra=(nChars||nCh)?'\n캐릭터 '+nChars+'명, 회차 '+nCh+'개 데이터도 함께 삭제됩니다.':'';
+  if(!confirm("'"+w.title+"' 작품을 삭제할까요?"+extra+'\n이 작업은 되돌릴 수 없습니다.'))return;
+  ['sv_chars_','sv_chapters_','sv_threads_'].forEach(p=>localStorage.removeItem(p+id));
+  S.works=S.works.filter(x=>x.id!==id); saveWorksLocal();
+  closeNWM(); logAct("'"+w.title+"' 작품 삭제",'var(--tertiary)');
+  if(!S.works.length){ localStorage.removeItem('sv_activeWork'); localStorage.removeItem('sv_workName'); showOb(localUser()||{name:'작가'}); return; }
+  if(S.activeId===id){ S.activeId=S.works[0].id; }
+  setActiveWork(S.activeId); if(!S.uid)syncLocalData(); renderAll();
+  toast('작품이 삭제되었습니다','info'); };
+window.closeNWM=()=>document.getElementById('nwm').classList.remove('open');
+window.createWork=async()=>{
+  const title=document.getElementById('nwt').value.trim(); if(!title){toast('작품 제목을 입력해주세요','error');return;}
+  const editId=document.getElementById('nw-edit-id').value;
+  if(editId){
+    const w=S.works.find(x=>x.id===editId); if(!w)return;
+    Object.assign(w,{title,genre:document.getElementById('nwg').value,status:document.getElementById('nws').value,
+      dailyGoal:parseInt(document.getElementById('nwgl').value)||5000,
+      progress:Math.max(0,Math.min(100,parseInt(document.getElementById('nwp').value)||0))});
+    saveWorksLocal(); if(editId===S.activeId){S.dailyGoal=w.dailyGoal;setActiveWork(editId);}
+    markRecordDay(); closeNWM(); renderAll(); logAct("'"+title+"' 작품 정보 수정"); toast('저장되었습니다','success'); return;
+  }
+  const C=['#7b4fff','#9a5ef0','#e5557a','#4a80ff','#20b090','#d0a020'];
+  const work={title,genre:document.getElementById('nwg').value,status:document.getElementById('nws').value,dailyGoal:parseInt(document.getElementById('nwgl').value)||5000,progress:Math.max(0,Math.min(100,parseInt(document.getElementById('nwp').value)||0)),color:C[S.works.length%C.length]};
+  let newId='local-'+Date.now();
+  if(S.uid&&FB){try{const r=await FB.addWork(S.uid,work);newId=r.id;}catch(e){toast('저장 실패: '+e.message,'error');return;}}
+  S.works.push({...work,id:newId}); S.activeId=newId;
+  saveWorksLocal(); setActiveWork(newId); if(!S.uid)syncLocalData(); markRecordDay();
+  if(S.uid)localStorage.setItem('sv_aw_'+S.uid,newId);
+  closeNWM(); renderAll(); logAct("새 작품 '"+title+"' 생성",'var(--success)'); toast("'"+title+"' 작품 생성 완료 🎉",'success'); document.getElementById('nwt').value='';
+};
+
+window.saveDay=async()=>{
+  const v=parseInt(document.getElementById('tci').value)||0; S.todayChars=v;
+  const st=readJ('sv_stats',{}); st[ldate(new Date())]={chars:v,goal:S.dailyGoal}; localStorage.setItem('sv_stats',JSON.stringify(st));
+  if(v>0)markRecordDay();
+  renderStats(); renderSC(); if(S.uid&&FB)await FB.saveStat(S.uid,ldate(new Date()),v,S.dailyGoal);
+  const h=document.getElementById('saved-hint'); h.style.display='inline';
+  logAct('오늘 '+v.toLocaleString()+'자 집필 기록','var(--success)');
+  setTimeout(()=>h.style.display='none',2500);
+};
+
+// Onboarding
+let _pls=[];
+window.togglePill=(el)=>{el.classList.toggle('on');};
+window.goS=(n)=>[1,2,3].forEach(i=>{document.getElementById('obs'+i).classList.toggle('active',i===n);const d=document.getElementById('sd'+i);if(i<n){d.classList.remove('current');d.classList.add('done');}else if(i===n){d.classList.add('current');d.classList.remove('done');}else d.classList.remove('current','done');});
+window.finishOb=async()=>{
+  const title=document.getElementById('ob-title').value.trim(); if(!title){toast('작품 제목을 입력해주세요','error');return;}
+  const g=parseInt(document.getElementById('ob-goal').value)||5000; S.dailyGoal=g;
+  const pls=[...document.querySelectorAll('#ob-plats .on')].map(b=>b.textContent.trim());
+  const work={title,genre:document.getElementById('ob-genre').value,status:document.getElementById('ob-status').value,platforms:pls,dailyGoal:g,progress:0,color:'#7b4fff'};
+  let newId='w-'+Date.now();
+  if(S.uid&&FB){try{const r=await FB.addWork(S.uid,work);newId=r.id;await FB.saveProfile(S.uid,{dailyGoal:g,displayName:S.user?.displayName});}catch(e){}}
+  S.works=[{...work,id:newId}]; S.activeId=newId;
+  saveWorksLocal(); setActiveWork(newId); migrateDefaultTo(newId); markRecordDay();
+  if(S.uid)localStorage.setItem('sv_aw_'+S.uid,newId); goS(3);
+};
+window.skipOb=()=>enterApp();
+window.enterApp=()=>{ if(!S.works.length){const id='w-'+Date.now();S.works=[{id,title:'내 첫 작품',genre:'현대판타지',status:'writing',dailyGoal:5000,progress:0,color:'#7b4fff'}];S.activeId=id;migrateDefaultTo(id);} saveWorksLocal(); setActiveWork(S.activeId); if(!S.uid)syncLocalData(); showApp(S.user||{displayName:(localUser()?.name||'작가')}); };
+
+// Mobile drawer
+window.openMD=()=>{document.getElementById('mdd').style.left='0px';document.getElementById('mdo').style.display='block';};
+window.closeMD=()=>{document.getElementById('mdd').style.left='-280px';document.getElementById('mdo').style.display='none';};
+
+// Sprint
+let sT=25*60,sL=25*60,sR=false,sI;
+window.openSpM=()=>document.getElementById('spm').classList.add('open');
+window.closeSp=()=>{document.getElementById('spm').classList.remove('open');if(sR){clearInterval(sI);sR=false;upSpB();}};
+window.setSD=(m)=>{if(sR)return;sT=sL=m*60;['15','25','50'].forEach(x=>{const b=document.getElementById('sp'+x);if(x==m){b.className='btn btn-secondary btn-sm';b.style.flex='1';b.style.borderColor='rgba(123,79,255,0.4)';}else{b.className='btn btn-ghost btn-sm';b.style.flex='1';b.style.borderColor='';}});upSpD();};
+window.toggleSp=()=>{if(sR){clearInterval(sI);sR=false;}else{sR=true;sI=setInterval(()=>{sL--;if(sL<=0){sL=0;clearInterval(sI);sR=false;toast('스프린트 완료! 수고하셨어요 🎉','success');logAct('집필 스프린트 완료','var(--warning)');}upSpD();},1000);}upSpB();};
+function upSpD(){const m=Math.floor(sL/60).toString().padStart(2,'0');const s=(sL%60).toString().padStart(2,'0');document.getElementById('sptime').textContent=m+':'+s;document.getElementById('spring').style.strokeDashoffset=276.5*(sL/sT);}
+function upSpB(){document.getElementById('spbtn').textContent=sR?'일시정지':(sL<sT?'계속':'시작');}
+
+// Toast
+window.toast=(msg,type='info')=>{const ic={success:'check_circle',error:'error',info:'info'};const c=document.getElementById('toast-container');const el=document.createElement('div');el.className='toast toast-'+type;el.innerHTML=`<span class="icon icon-sm">${ic[type]}</span>${msg}`;c.appendChild(el);setTimeout(()=>el.remove(),3500);};
+</script>
+</body>
+</html>

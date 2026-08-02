@@ -3,22 +3,21 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<script>if(!localStorage.getItem('sv_user'))location.replace('index.html');</script>
 <title>캐릭터 DB — StoryVital</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&family=Noto+Serif+KR:wght@300;400;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 
 <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-  import { firebaseConfig } from './firebase-config.js';
-  import * as DB from './src/firebase/db.js';
+  import { collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-  let db, auth;
+  // 설정은 firebase.js 한 곳에서만 관리 (file:// 실행 시엔 로컬 모드로 동작)
+  let db = null, auth = null;
   try {
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app); auth = getAuth(app);
+    const FB = await import('./firebase.js');
+    if (FB.isConfigured) { db = FB.getDB(); auth = FB.getAuthI(); }
   } catch(e) {}
 
   window.addEventListener('load', () => {
@@ -27,8 +26,8 @@
       if (user) {
         window.currentUser = user;
         const workId = localStorage.getItem('sv_activeWork') || 'default';
-        const q = query(collection(db, 'characters'), where('userId', '==', user.uid), where('projectId', '==', workId));
-        onSnapshot(q, snap => {
+        const ref = collection(db, 'users', user.uid, 'works', workId, 'characters');
+        onSnapshot(ref, snap => {
           const chars = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           window.appChars = chars.length ? chars : getDemoChars();
           applyRender();
@@ -40,12 +39,22 @@
   window.saveCharDb = async (char) => {
     if (!window.currentUser || !db) return null;
     const workId = localStorage.getItem('sv_activeWork') || 'default';
-    return await DB.saveCharacter(char, window.currentUser.uid, workId);
+    const ref = collection(db, 'users', window.currentUser.uid, 'works', workId, 'characters');
+    try {
+      if (char.id && !char.id.startsWith('demo') && !char.id.startsWith('local')) {
+        await updateDoc(doc(db, 'users', window.currentUser.uid, 'works', workId, 'characters', char.id), char);
+        return char.id;
+      } else {
+        const docRef = await addDoc(ref, char);
+        return docRef.id;
+      }
+    } catch(e) { return null; }
   };
 
   window.deleteCharDb = async (id) => {
     if (!window.currentUser || !db) return;
-    await DB.deleteCharacter(id);
+    const workId = localStorage.getItem('sv_activeWork') || 'default';
+    try { await deleteDoc(doc(db, 'users', window.currentUser.uid, 'works', workId, 'characters', id)); } catch(e) {}
   };
 </script>
 
@@ -130,17 +139,18 @@ select.inp option { background:#1a1a21; }
 <!-- NAV -->
 <nav class="fixed top-0 left-0 right-0 z-[100] h-16 glass-bright flex items-center justify-between px-4 lg:px-6">
   <div class="flex items-center gap-3">
-    <a href="./index.html" class="flex items-center gap-2">
+    <a href="index.html" class="flex items-center gap-2">
       <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#7c50ff,#b8a2ff)">
         <span class="mat-icon text-white" style="font-size:14px">auto_stories</span>
       </div>
       <span class="font-display font-extrabold text-white text-base hidden sm:block">StoryVital</span>
     </a>
     <div class="hidden lg:flex items-center gap-5 ml-4" style="font-size:14px">
-      <a href="./index.html" class="nav-link">대시보드</a>
-      <a href="./characters.html" class="nav-active font-semibold">캐릭터</a>
-      <a href="./chapters.html" class="nav-link">챕터 트래커</a>
-      <a href="./export.html" class="nav-link">내보내기</a>
+      <a href="index.html" class="nav-link">대시보드</a>
+      <a href="characters.html" class="nav-active font-semibold">캐릭터</a>
+      <a href="relations.html" class="nav-link">관계도</a>
+      <a href="chapters.html" class="nav-link">챕터 트래커</a>
+      <a href="export.html" class="nav-link">내보내기</a>
     </div>
   </div>
   <div class="flex items-center gap-2">
@@ -161,10 +171,11 @@ select.inp option { background:#1a1a21; }
     <p class="font-display font-bold text-white text-sm" id="sidebar-work-name">-</p>
   </div>
   <nav class="flex-1 px-2 space-y-0.5">
-    <a href="./index.html" class="sidebar-item"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
-    <a href="./characters.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
-    <a href="./chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
-    <a href="./export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
+    <a href="index.html" class="sidebar-item"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
+    <a href="characters.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
+    <a href="relations.html" class="sidebar-item"><span class="mat-icon text-lg">hub</span>관계도</a>
+    <a href="chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
+    <a href="export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
   </nav>
 </aside>
 
@@ -219,6 +230,11 @@ select.inp option { background:#1a1a21; }
 
   <!-- Grid -->
   <div class="px-4 lg:px-8 py-5">
+    <div id="demo-banner" class="hidden mb-4 flex items-center gap-3 rounded-xl px-4 py-3" style="background:rgba(124,80,255,0.08);border:1px solid rgba(124,80,255,0.2)">
+      <span class="mat-icon flex-shrink-0" style="color:#b8a2ff">info</span>
+      <p class="text-xs flex-1 leading-relaxed" style="color:#9e9aaa">지금 보이는 인물들은 <b style="color:#b8a2ff">예시 데이터</b>입니다. 그대로 수정하며 익혀도 되고, 비우고 내 작품으로 시작할 수도 있어요.</p>
+      <button onclick="clearDemoData()" class="text-xs font-semibold rounded-lg px-3 py-1.5 flex-shrink-0" style="border:1px solid rgba(184,162,255,0.2);color:#eae6f4">비우고 시작</button>
+    </div>
     <div id="char-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
     <div id="empty-state" class="hidden text-center py-20">
       <span class="mat-icon block mb-3" style="font-size:48px;color:#5e5b68">person_search</span>
@@ -236,10 +252,11 @@ select.inp option { background:#1a1a21; }
 
 <!-- MOBILE NAV -->
 <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-[90] h-16 flex items-center justify-around" style="background:rgba(9,9,13,0.95);border-top:1px solid rgba(184,162,255,0.08)">
-  <a href="./index.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">dashboard</span><span style="font-size:10px">홈</span></a>
-  <a href="./characters.html" class="flex flex-col items-center gap-1" style="color:#b8a2ff"><span class="mat-icon text-xl">group</span><span style="font-size:10px">캐릭터</span></a>
-  <a href="./chapters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">auto_stories</span><span style="font-size:10px">챕터</span></a>
-  <a href="./export.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">upload_file</span><span style="font-size:10px">내보내기</span></a>
+  <a href="index.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">dashboard</span><span style="font-size:10px">홈</span></a>
+  <a href="characters.html" class="flex flex-col items-center gap-1" style="color:#b8a2ff"><span class="mat-icon text-xl">group</span><span style="font-size:10px">캐릭터</span></a>
+  <a href="relations.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">hub</span><span style="font-size:10px">관계도</span></a>
+  <a href="chapters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">auto_stories</span><span style="font-size:10px">챕터</span></a>
+  <a href="export.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">upload_file</span><span style="font-size:10px">내보내기</span></a>
 </nav>
 
 <!-- DETAIL PANEL OVERLAY -->
@@ -250,7 +267,8 @@ select.inp option { background:#1a1a21; }
   <div class="flex items-center justify-between px-5 py-4" style="border-bottom:1px solid rgba(184,162,255,0.08)">
     <h2 class="font-display font-bold text-white text-base">캐릭터 상세</h2>
     <div class="flex items-center gap-2">
-      <button onclick="editFromDetail()" class="mat-icon text-xl nav-link">edit</button>
+      <button onclick="editFromDetail()" title="수정" class="mat-icon text-xl nav-link">edit</button>
+      <button onclick="deleteFromDetail()" title="삭제" class="mat-icon text-xl" style="color:#e8587a;opacity:0.7" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">delete</button>
       <button onclick="closeDetail()" class="mat-icon text-xl nav-link">close</button>
     </div>
   </div>
@@ -266,10 +284,24 @@ select.inp option { background:#1a1a21; }
   <div class="flex-1 overflow-y-auto px-5 py-5 space-y-5">
     <input type="hidden" id="edit-id"/>
 
-    <!-- Avatar preview -->
-    <div class="flex items-center gap-4 p-4 rounded-xl" style="background:rgba(0,0,0,0.4)">
-      <div id="avatar-preview" class="w-14 h-14 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0" style="background:#7c50ff">?</div>
-      <div class="text-sm" style="color:#9e9aaa">이름 입력 시 자동 배정</div>
+    <!-- Avatar picker -->
+    <div class="p-4 rounded-xl" style="background:rgba(0,0,0,0.4)">
+      <div class="flex items-center gap-4 mb-3">
+        <div id="avatar-preview" class="w-14 h-14 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0 overflow-hidden" style="background:#7c50ff">?</div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-white mb-0.5">인물 이미지</p>
+          <p class="text-xs" style="color:#9e9aaa">샘플을 고르거나 사진을 올려보세요</p>
+        </div>
+        <button onclick="shuffleAvatars()" title="샘플 새로 뽑기" class="mat-icon text-lg nav-link">casino</button>
+      </div>
+      <div id="avatar-samples" class="grid grid-cols-6 gap-2 mb-3"></div>
+      <div class="flex gap-2">
+        <label class="flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold cursor-pointer" style="background:rgba(124,80,255,0.15);color:#b8a2ff">
+          <span class="mat-icon text-sm">upload</span>사진 업로드
+          <input type="file" accept="image/*" class="hidden" onchange="onAvatarUpload(this)"/>
+        </label>
+        <button onclick="clearAvatar()" class="flex-1 rounded-lg py-2 text-xs" style="border:1px solid rgba(184,162,255,0.15);color:#9e9aaa">기본(이니셜)으로</button>
+      </div>
     </div>
 
     <div class="grid grid-cols-2 gap-3">
@@ -333,6 +365,7 @@ select.inp option { background:#1a1a21; }
         <button onclick="addRelation()" class="text-xs" style="color:#b8a2ff">+ 추가</button>
       </div>
       <div id="relations-container" class="space-y-2"></div>
+      <datalist id="char-names"></datalist>
     </div>
 
     <div>
@@ -355,19 +388,103 @@ const ROLE_TEXT = { '주인공':'#b8a2ff','히로인':'#c490ff','조력자':'#40
 
 let state = { filter:'all', search:'', sort:'created', chars:[], selectedId:null, editId:null };
 let formTags = [], formRelations = [];
+let formAvatar = null, avatarSalt = '';
+
+// ─── 아바타 ──────────────────────────────
+// 샘플: DiceBear 6종 스타일, 이름을 시드로 생성 (이름이 바뀌면 샘플도 바뀜)
+const AVATAR_STYLES = ['adventurer','lorelei','micah','notionists','avataaars','adventurer-neutral'];
+function sampleAvatarUrl(style, name) {
+  const seed = encodeURIComponent((name || '캐릭터') + avatarSalt);
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&backgroundColor=transparent`;
+}
+function avatarHtml(c, sizeClass, fallbackFontSize) {
+  // c: {name, color, avatar} — 아바타 있으면 이미지, 없으면 이니셜 원
+  if (c.avatar) {
+    return `<div class="${sizeClass} rounded-full flex-shrink-0 overflow-hidden" style="background:${c.color}22;box-shadow:0 0 16px ${c.color}40">
+      <img src="${c.avatar}" alt="" style="width:100%;height:100%;object-fit:cover"/></div>`;
+  }
+  return `<div class="${sizeClass} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0" style="background:${c.color};box-shadow:0 0 16px ${c.color}40;font-size:${fallbackFontSize}">${c.name ? c.name[0] : '?'}</div>`;
+}
+function renderAvatarSamples() {
+  const name = document.getElementById('f-name').value.trim();
+  document.getElementById('avatar-samples').innerHTML = AVATAR_STYLES.map(st => {
+    const url = sampleAvatarUrl(st, name);
+    const sel = formAvatar === url;
+    return `<button onclick="pickAvatar('${url.replace(/'/g,"\\'")}')" class="rounded-full overflow-hidden transition-all" title="${st}"
+      style="aspect-ratio:1;background:rgba(255,255,255,0.05);border:2px solid ${sel ? '#7c50ff' : 'transparent'};${sel?'box-shadow:0 0 10px rgba(124,80,255,0.5)':''}">
+      <img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>
+    </button>`;
+  }).join('');
+}
+window.pickAvatar = function(url) { formAvatar = url; renderAvatarSamples(); refreshAvatarPreview(); };
+window.shuffleAvatars = function() { avatarSalt = '-' + Math.random().toString(36).slice(2,7); formAvatar = null; renderAvatarSamples(); refreshAvatarPreview(); };
+window.clearAvatar = function() { formAvatar = null; renderAvatarSamples(); refreshAvatarPreview(); };
+window.onAvatarUpload = function(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      // localStorage 용량 보호: 128px로 축소 후 JPEG 저장 (~10KB)
+      const size = 128;
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const min = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width-min)/2, (img.height-min)/2, min, min, 0, 0, size, size);
+      formAvatar = canvas.toDataURL('image/jpeg', 0.85);
+      renderAvatarSamples(); refreshAvatarPreview();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+};
+function refreshAvatarPreview() {
+  const el = document.getElementById('avatar-preview');
+  const name = document.getElementById('f-name').value.trim();
+  if (formAvatar) {
+    el.style.background = 'rgba(255,255,255,0.05)';
+    el.innerHTML = `<img src="${formAvatar}" alt="" style="width:100%;height:100%;object-fit:cover"/>`;
+  } else {
+    el.innerHTML = name ? name[0] : '?';
+    el.style.background = name ? COLORS[(name.charCodeAt(0) + name.length) % COLORS.length] : '#7c50ff';
+  }
+}
 
 // Init
 window.appChars = null;
+
+// ─── localStorage 영속화 ──────────────────
+// 작품(work)별로 캐릭터를 저장: sv_chars_{workId}
+function charsStorageKey() {
+  return 'sv_chars_' + (localStorage.getItem('sv_activeWork') || 'default');
+}
+function loadCharsLocal() {
+  try {
+    const raw = localStorage.getItem(charsStorageKey());
+    if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) return arr; }
+  } catch(e) {}
+  return null;
+}
+window.saveCharsLocal = function() {
+  try { localStorage.setItem(charsStorageKey(), JSON.stringify(window.appChars || [])); } catch(e) {}
+  try { const pd=n=>String(n).padStart(2,'0'), t=new Date(), ds=t.getFullYear()+'-'+pd(t.getMonth()+1)+'-'+pd(t.getDate());
+    const days=JSON.parse(localStorage.getItem('sv_record_days')||'{}'); days[ds]=1;
+    localStorage.setItem('sv_record_days',JSON.stringify(days)); } catch(e) {}
+};
+
 function loadDemo() {
-  window.appChars = getDemoChars();
+  window.appChars = loadCharsLocal() || getDemoChars();
   applyRender();
 }
 function getDemoChars() {
   return [
-    { id:'demo1', name:'이현준', role:'주인공', archetype:'성장형 영웅', firstChap:'1화', appearance:'검은 머리카락, 날카로운 눈매, 178cm. 왼쪽 손목에 마석 균열 흔적.', personality:'냉정해 보이지만 의리가 강하다. 혼자 짊어지려는 경향이 있어 갈등의 씨앗.', ability:'마력 흡수 및 역방출. 한계 이상 사용 시 기억 상실.', backstory:'3년 전 폐허 광산에서 유일하게 생존. 생존의 비밀을 쫓고 있다.', tags:['마석','기억상실','고독'], relations:[{name:'서이안',type:'히로인'},{name:'강민혁',type:'앙숙'}], memo:'사실 3세대 환생 마법사. 30화에서 공개 예정.', color:'#7c50ff', createdAt:'2024-01-01' },
-    { id:'demo2', name:'서이안', role:'히로인', archetype:'예언자', firstChap:'3화', appearance:'은백색 머리, 자주 눈을 피한다. 항상 흰 장갑 착용.', personality:'차갑고 말이 없지만 주인공에게만 조금씩 마음을 연다.', ability:'예지몽. 미래를 바꾸려 할수록 더 나쁜 결과가 온다.', backstory:'왕국 예언사 가문 출신. 7살부터 미래를 보기 시작.', tags:['예지몽','왕국','비밀'], relations:[{name:'이현준',type:'주인공'}], memo:'사실 주인공의 전생 아내. 자신도 기억 못 함.', color:'#9d60f0', createdAt:'2024-01-02' },
-    { id:'demo3', name:'강민혁', role:'빌런', archetype:'비극적 악역', firstChap:'12화', appearance:'40대 초반, 귀족 복장. 오른쪽 눈이 의안.', personality:'표면상 온화하지만 목적을 위해 수단을 가리지 않는다.', ability:'마법진 조작의 천재. 마계 봉인을 깰 수 있는 유일한 인물.', backstory:'과거 영웅이었으나 가족을 잃은 후 세계를 증오.', tags:['의안','마법진','비극'], relations:[{name:'이현준',type:'앙숙'}], memo:'최종장에서 구원 아크. 독자 울릴 것.', color:'#e8587a', createdAt:'2024-01-05' },
-    { id:'demo4', name:'유이나', role:'조력자', archetype:'해결사', firstChap:'8화', appearance:'짧은 빨간 머리, 항상 웃고 있다. 체구가 작지만 전투력이 높다.', personality:'밝고 긍정적. 어떤 상황에서도 웃음을 잃지 않지만 혼자 있을 때는 다르다.', ability:'신체 강화 마법. 단, 연속 사용 시 뼈에 균열이 생긴다.', backstory:'고아 출신. 마법사 길드 최연소 S급.', tags:['강화마법','길드','숨겨진상처'], relations:[{name:'이현준',type:'동료'},{name:'서이안',type:'친구'}], memo:'', color:'#20b090', createdAt:'2024-01-08' },
+    { id:'demo1', name:'이현준', role:'주인공', archetype:'성장형 영웅', firstChap:'1화', appearance:'검은 머리카락, 날카로운 눈매, 178cm. 왼쪽 손목에 마석 균열 흔적.', personality:'냉정해 보이지만 의리가 강하다. 혼자 짊어지려는 경향이 있어 갈등의 씨앗.', ability:'마력 흡수 및 역방출. 한계 이상 사용 시 기억 상실.', backstory:'3년 전 폐허 광산에서 유일하게 생존. 생존의 비밀을 쫓고 있다.', tags:['마석','기억상실','고독'], relations:[{name:'서이안',type:'히로인',closeness:75},{name:'강민혁',type:'앙숙',closeness:12}], memo:'사실 3세대 환생 마법사. 30화에서 공개 예정.', color:'#7c50ff', createdAt:'2024-01-01' },
+    { id:'demo2', name:'서이안', role:'히로인', archetype:'예언자', firstChap:'3화', appearance:'은백색 머리, 자주 눈을 피한다. 항상 흰 장갑 착용.', personality:'차갑고 말이 없지만 주인공에게만 조금씩 마음을 연다.', ability:'예지몽. 미래를 바꾸려 할수록 더 나쁜 결과가 온다.', backstory:'왕국 예언사 가문 출신. 7살부터 미래를 보기 시작.', tags:['예지몽','왕국','비밀'], relations:[{name:'이현준',type:'주인공',closeness:78}], memo:'사실 주인공의 전생 아내. 자신도 기억 못 함.', color:'#9d60f0', createdAt:'2024-01-02' },
+    { id:'demo3', name:'강민혁', role:'빌런', archetype:'비극적 악역', firstChap:'12화', appearance:'40대 초반, 귀족 복장. 오른쪽 눈이 의안.', personality:'표면상 온화하지만 목적을 위해 수단을 가리지 않는다.', ability:'마법진 조작의 천재. 마계 봉인을 깰 수 있는 유일한 인물.', backstory:'과거 영웅이었으나 가족을 잃은 후 세계를 증오.', tags:['의안','마법진','비극'], relations:[{name:'이현준',type:'앙숙',closeness:12}], memo:'최종장에서 구원 아크. 독자 울릴 것.', color:'#e8587a', createdAt:'2024-01-05' },
+    { id:'demo4', name:'유이나', role:'조력자', archetype:'해결사', firstChap:'8화', appearance:'짧은 빨간 머리, 항상 웃고 있다. 체구가 작지만 전투력이 높다.', personality:'밝고 긍정적. 어떤 상황에서도 웃음을 잃지 않지만 혼자 있을 때는 다르다.', ability:'신체 강화 마법. 단, 연속 사용 시 뼈에 균열이 생긴다.', backstory:'고아 출신. 마법사 길드 최연소 S급.', tags:['강화마법','길드','숨겨진상처'], relations:[{name:'이현준',type:'동료',closeness:62},{name:'서이안',type:'친구',closeness:55}], memo:'', color:'#20b090', createdAt:'2024-01-08' },
   ];
 }
 
@@ -383,7 +500,26 @@ window.addEventListener('load', () => {
 });
 
 // ─── Render ──────────────────────────────
+let deepLinkDone = false;
+window.clearDemoData = function() {
+  if (!confirm('예시 데이터를 모두 지우고 빈 상태에서 시작할까요?')) return;
+  window.appChars = [];
+  saveCharsLocal();
+  applyRender();
+};
+
 window.applyRender = function() {
+  const isDemo = !!(window.appChars?.length && window.appChars.every(c => String(c.id).startsWith('demo')));
+  const banner = document.getElementById('demo-banner');
+  if (banner) banner.classList.toggle('hidden', !isDemo);
+
+  // 관계도 등에서 ?edit={id} 딥링크로 진입한 경우 해당 인물 편집 드로어를 바로 연다
+  if (!deepLinkDone && window.appChars) {
+    deepLinkDone = true;
+    const eid = new URLSearchParams(location.search).get('edit');
+    if (eid && window.appChars.find(c => c.id === eid)) setTimeout(() => openFormDrawer(eid), 100);
+  }
+
   let chars = [...(window.appChars || [])];
 
   // Filter by role
@@ -430,12 +566,11 @@ window.applyRender = function() {
     card.innerHTML = `
       <div class="p-4">
         <div class="flex items-start gap-3 mb-3">
-          <div class="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-base flex-shrink-0"
-            style="background:${c.color};box-shadow:0 0 16px ${c.color}40">${c.name[0]}</div>
-              <div class="flex items-center gap-0.5 flex-shrink-0">
-                <button onclick="event.stopPropagation();openFormDrawer('${c.id}')" class="mat-icon text-base nav-link p-1">edit</button>
-                <button onclick="event.stopPropagation();window.deleteCharCard('${c.id}')" class="mat-icon text-base text-outline hover:text-red-400 p-1">delete</button>
-              </div>
+          ${avatarHtml(c,'w-11 h-11','16px')}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-1">
+              <h3 class="font-display font-bold text-white text-sm truncate">${highlight(c.name, q)}</h3>
+              <button onclick="event.stopPropagation();openFormDrawer('${c.id}')" class="mat-icon text-base flex-shrink-0 nav-link">edit</button>
             </div>
             <p class="text-xs mt-0.5" style="color:#9e9aaa">${c.role} ${c.firstChap?'· '+c.firstChap:''}</p>
           </div>
@@ -489,19 +624,28 @@ window.openDetail = function(id) {
   applyRender();
 
   const content = document.getElementById('detail-content');
-  const relHtml = (c.relations||[]).map(r => `
+  const relHtml = (c.relations||[]).map(r => {
+    const cl = r.closeness ?? 50;
+    const rc = window.appChars.find(x => x.name === r.name);
+    return `
     <div class="relation-row">
-      <div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background:#7c50ff40">${r.name[0]}</div>
+      ${rc ? avatarHtml(rc,'w-7 h-7','12px') : `<div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style="background:#7c50ff40">${r.name[0]}</div>`}
       <div class="flex-1">
         <p class="text-sm text-white">${r.name}</p>
         <p class="text-xs" style="color:#9e9aaa">${r.type}</p>
       </div>
-    </div>
-  `).join('');
+      <div class="flex flex-col items-end gap-1 flex-shrink-0" style="width:80px">
+        <span class="text-xs font-bold" style="color:#b8a2ff">친밀도 ${cl}</span>
+        <div class="w-full rounded-full" style="height:4px;background:rgba(255,255,255,0.08)">
+          <div class="rounded-full" style="height:4px;width:${cl}%;background:linear-gradient(90deg,#7c50ff,#b8a2ff)"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 
   content.innerHTML = `
     <div class="flex items-center gap-4 mb-6">
-      <div class="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold" style="background:${c.color};box-shadow:0 0 24px ${c.color}50">${c.name[0]}</div>
+      ${avatarHtml(c,'w-16 h-16','24px')}
       <div>
         <h2 class="text-xl font-display font-bold text-white">${c.name}</h2>
         <p class="text-sm" style="color:#9e9aaa">${c.role} ${c.firstChap?'· 첫 등장 '+c.firstChap:''}</p>
@@ -538,6 +682,17 @@ window.closeDetail = function() {
   applyRender();
 };
 
+window.deleteFromDetail = async function() {
+  const c = window.appChars.find(c => c.id === state.selectedId);
+  if (!c) return;
+  if (!confirm(`'${c.name}'을(를) 삭제할까요?`)) return;
+  if (window.deleteCharDb) await window.deleteCharDb(c.id);
+  window.appChars = window.appChars.filter(x => x.id !== c.id);
+  closeDetail();
+  saveCharsLocal();
+  applyRender();
+};
+
 window.editFromDetail = function() {
   closeDetail();
   openFormDrawer(state.selectedId || (window.appChars.length ? window.appChars[0].id : null));
@@ -548,6 +703,8 @@ window.openFormDrawer = function(id) {
   state.editId = id;
   formTags = [];
   formRelations = [];
+  formAvatar = null;
+  avatarSalt = '';
   document.getElementById('form-title').textContent = id ? '캐릭터 수정' : '새 캐릭터 추가';
   document.getElementById('delete-btn').classList.toggle('hidden', !id);
   document.getElementById('edit-id').value = id || '';
@@ -559,8 +716,6 @@ window.openFormDrawer = function(id) {
   });
   document.getElementById('tags-container').innerHTML = '';
   document.getElementById('relations-container').innerHTML = '';
-  document.getElementById('avatar-preview').textContent = '?';
-  document.getElementById('avatar-preview').style.background = '#7c50ff';
 
   if (id) {
     const c = window.appChars.find(c => c.id === id);
@@ -575,30 +730,33 @@ window.openFormDrawer = function(id) {
       document.getElementById('f-backstory').value = c.backstory || '';
       document.getElementById('f-memo').value = c.memo || '';
       formTags = [...(c.tags || [])];
-      formRelations = [...(c.relations || [])];
+      formRelations = (c.relations || []).map(r => ({...r}));
+      formAvatar = c.avatar || null;
       renderTags(); renderRelations();
-      updatePreview(c.name);
-      document.getElementById('avatar-preview').style.background = c.color;
     }
   }
+  refreshAvatarPreview();
+  renderAvatarSamples();
+  refreshNameDatalist();
   document.getElementById('form-drawer').classList.add('open');
 };
 
-window.closeFormDrawer = function() {
+// 입력 중 닫기 → 확인 후 닫기 (실수로 작성 내용을 날리는 이탈 방지)
+function formIsDirty() {
+  const name = document.getElementById('f-name').value.trim();
+  if (state.editId) return false; // 수정 모드는 원본이 남아있으므로 확인 생략
+  return !!(name || formTags.length || formRelations.length || formAvatar ||
+    ['f-appearance','f-personality','f-ability','f-backstory','f-memo'].some(fid => document.getElementById(fid).value.trim()));
+}
+window.closeFormDrawer = function(force) {
+  if (!force && formIsDirty() && !confirm('작성 중인 내용이 사라집니다. 닫을까요?')) return;
   document.getElementById('form-drawer').classList.remove('open');
   state.editId = null;
 };
 
-window.updatePreview = function(name) {
-  const el = document.getElementById('avatar-preview');
-  if (name) {
-    el.textContent = name[0];
-    const color = COLORS[(name.charCodeAt(0) + name.length) % COLORS.length];
-    el.style.background = color;
-  } else {
-    el.textContent = '?';
-    el.style.background = '#7c50ff';
-  }
+window.updatePreview = function() {
+  refreshAvatarPreview();
+  renderAvatarSamples();
 };
 
 // Tags
@@ -619,19 +777,39 @@ window.removeTag = function(i) { formTags.splice(i,1); renderTags(); };
 
 // Relations
 window.addRelation = function() {
-  formRelations.push({ name:'', type:'' });
+  formRelations.push({ name:'', type:'', closeness:50 });
   renderRelations();
 };
 function renderRelations() {
   document.getElementById('relations-container').innerHTML = formRelations.map((r,i) => `
-    <div class="relation-row">
+    <div class="relation-row" style="flex-wrap:wrap">
       <div class="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs" style="background:#7c50ff40">${r.name?r.name[0]:'?'}</div>
-      <input type="text" placeholder="이름" value="${r.name||''}" class="inp flex-1" style="padding:6px 10px;font-size:13px" oninput="formRelations[${i}].name=this.value;renderRelations()"/>
+      <input type="text" list="char-names" placeholder="이름" value="${r.name||''}" class="inp flex-1" style="padding:6px 10px;font-size:13px" oninput="formRelations[${i}].name=this.value;this.parentElement.firstElementChild.textContent=this.value?this.value[0]:'?'"/>
       <input type="text" placeholder="관계 (친구, 앙숙...)" value="${r.type||''}" class="inp flex-1" style="padding:6px 10px;font-size:13px" oninput="formRelations[${i}].type=this.value"/>
       <button onclick="formRelations.splice(${i},1);renderRelations()" class="mat-icon text-base" style="color:#e8587a">remove_circle</button>
+      <div class="flex items-center gap-2 w-full pl-8" style="margin-top:2px">
+        <span class="text-xs flex-shrink-0" style="color:#5e5b68">친밀도</span>
+        <input type="range" min="0" max="100" value="${r.closeness ?? 50}" class="flex-1" style="accent-color:#7c50ff;height:4px"
+          oninput="formRelations[${i}].closeness=parseInt(this.value);this.nextElementSibling.textContent=this.value"/>
+        <span class="text-xs font-bold w-7 text-right" style="color:#b8a2ff">${r.closeness ?? 50}</span>
+      </div>
     </div>
   `).join('');
 }
+
+function refreshNameDatalist() {
+  const me = document.getElementById('f-name').value.trim();
+  document.getElementById('char-names').innerHTML = (window.appChars||[])
+    .filter(c => c.name !== me)
+    .map(c => `<option value="${c.name}"></option>`).join('');
+}
+
+// ESC로 패널/드로어 닫기
+window.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('form-drawer').classList.contains('open')) closeFormDrawer();
+  else if (document.getElementById('detail-panel').classList.contains('open')) closeDetail();
+});
 
 window.saveChar = async function() {
   const name = document.getElementById('f-name').value.trim();
@@ -642,6 +820,7 @@ window.saveChar = async function() {
 
   const char = {
     name, color,
+    avatar: formAvatar,
     role: document.getElementById('f-role').value,
     archetype: document.getElementById('f-archetype').value,
     firstChap: document.getElementById('f-firstchap').value,
@@ -667,24 +846,19 @@ window.saveChar = async function() {
     window.appChars.push({ ...char, id: savedId || ('local-'+Date.now()) });
   }
 
-  closeFormDrawer();
-  applyRender();
-};
-
-window.deleteCharCard = async function(id) {
-  if (!confirm('캐릭터를 삭제하시겠습니까?')) return;
-  await deleteCharDb(id);
-  if (state.selectedId === id) closeDetail();
-  window.appChars = window.appChars.filter(c => c.id !== id);
+  closeFormDrawer(true);
+  saveCharsLocal();
   applyRender();
 };
 
 window.deleteChar = async function() {
-  if (!state.editId) return;
-  if (!confirm('캐릭터를 삭제하시겠습니까?')) return;
-  await deleteCharDb(state.editId);
-  window.appChars = window.appChars.filter(c => c.id !== state.editId);
-  closeFormDrawer();
+  const id = document.getElementById('edit-id').value;
+  if (!id) return;
+  if (!confirm('이 캐릭터를 삭제할까요?')) return;
+  if (window.deleteCharDb) await window.deleteCharDb(id);
+  window.appChars = window.appChars.filter(c => c.id !== id);
+  closeFormDrawer(true);
+  saveCharsLocal();
   applyRender();
 };
 

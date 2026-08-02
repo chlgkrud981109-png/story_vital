@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<script>if(!localStorage.getItem('sv_user'))location.replace('index.html');</script>
 <title>내보내기 — StoryVital</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&family=Noto+Serif+KR:wght@300;400;700&display=swap" rel="stylesheet"/>
@@ -94,10 +95,11 @@ textarea.inp{font-family:'Noto Serif KR',serif;line-height:1.85;resize:none}
       <span class="font-display font-extrabold text-white text-base hidden sm:block">StoryVital</span>
     </a>
     <div class="hidden lg:flex items-center gap-5 ml-4" style="font-size:14px">
-      <a href="./index.html" class="nav-link">대시보드</a>
-      <a href="./characters.html" class="nav-link">캐릭터</a>
-      <a href="./chapters.html" class="nav-link">챕터 트래커</a>
-      <a href="./export.html" class="nav-active font-semibold">내보내기</a>
+      <a href="index.html" class="nav-link">대시보드</a>
+      <a href="characters.html" class="nav-link">캐릭터</a>
+      <a href="relations.html" class="nav-link">관계도</a>
+      <a href="chapters.html" class="nav-link">챕터 트래커</a>
+      <a href="export.html" class="nav-active font-semibold">내보내기</a>
     </div>
   </div>
   <div class="flex items-center gap-2">
@@ -116,10 +118,11 @@ textarea.inp{font-family:'Noto Serif KR',serif;line-height:1.85;resize:none}
     <p class="font-display font-bold text-white text-sm" id="sidebar-work-name">마법사의 귀환</p>
   </div>
   <nav class="flex-1 px-2 space-y-0.5">
-    <a href="./index.html" class="sidebar-item"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
-    <a href="./characters.html" class="sidebar-item"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
-    <a href="./chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
-    <a href="./export.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
+    <a href="index.html" class="sidebar-item"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
+    <a href="characters.html" class="sidebar-item"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
+    <a href="relations.html" class="sidebar-item"><span class="mat-icon text-lg">hub</span>관계도</a>
+    <a href="chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
+    <a href="export.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
   </nav>
 </aside>
 
@@ -147,6 +150,27 @@ textarea.inp{font-family:'Noto Serif KR',serif;line-height:1.85;resize:none}
 
     <!-- LEFT -->
     <div class="space-y-4">
+
+      <!-- Work data: 설정집/백업 -->
+      <div class="glass-bright rounded-xl p-5 fade-up" style="border-color:rgba(124,80,255,0.25)">
+        <h3 class="text-sm font-semibold text-white mb-1 flex items-center gap-1.5">
+          <span class="mat-icon text-base" style="color:#b8a2ff">menu_book</span>작품 설정집 · 백업
+        </h3>
+        <p class="text-xs mb-3" id="wd-summary" style="color:#9e9aaa">-</p>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <button onclick="downloadBible()" class="flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold text-white" style="background:#7c50ff">
+            <span class="mat-icon text-sm">description</span>설정집 TXT
+          </button>
+          <button onclick="downloadBackup()" class="flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold" style="background:rgba(124,80,255,0.12);color:#b8a2ff;border:1px solid rgba(124,80,255,0.3)">
+            <span class="mat-icon text-sm">cloud_download</span>JSON 백업
+          </button>
+        </div>
+        <label class="flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs cursor-pointer" style="border:1px dashed rgba(184,162,255,0.25);color:#9e9aaa">
+          <span class="mat-icon text-sm">cloud_upload</span>JSON 복원 (가져오기)
+          <input type="file" accept=".json,application/json" class="hidden" onchange="importBackup(this)"/>
+        </label>
+        <p class="text-xs mt-2 leading-relaxed" style="color:#5e5b68">설정집은 피칭·공유용 문서, JSON은 기기 이전·복원용 전체 백업입니다.</p>
+      </div>
 
       <!-- Platform selector -->
       <div class="glass-bright rounded-xl p-5 fade-up d1">
@@ -365,10 +389,11 @@ textarea.inp{font-family:'Noto Serif KR',serif;line-height:1.85;resize:none}
 
 <!-- MOBILE NAV -->
 <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-[90] h-16 flex items-center justify-around" style="background:rgba(9,9,13,0.95);border-top:1px solid rgba(184,162,255,0.08)">
-  <a href="./index.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">dashboard</span><span style="font-size:10px">홈</span></a>
-  <a href="./characters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">group</span><span style="font-size:10px">캐릭터</span></a>
-  <a href="./chapters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">auto_stories</span><span style="font-size:10px">챕터</span></a>
-  <a href="./export.html" class="flex flex-col items-center gap-1" style="color:#b8a2ff"><span class="mat-icon text-xl">upload_file</span><span style="font-size:10px">내보내기</span></a>
+  <a href="index.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">dashboard</span><span style="font-size:10px">홈</span></a>
+  <a href="characters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">group</span><span style="font-size:10px">캐릭터</span></a>
+  <a href="relations.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">hub</span><span style="font-size:10px">관계도</span></a>
+  <a href="chapters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">auto_stories</span><span style="font-size:10px">챕터</span></a>
+  <a href="export.html" class="flex flex-col items-center gap-1" style="color:#b8a2ff"><span class="mat-icon text-xl">upload_file</span><span style="font-size:10px">내보내기</span></a>
 </nav>
 
 <script>
@@ -390,7 +415,95 @@ let exportHistory = JSON.parse(localStorage.getItem('sv_exp_history') || '[]');
 let savedPresets = JSON.parse(localStorage.getItem('sv_exp_presets') || '[]');
 
 // ─── Init ──────────────────────────────
+// ─── 작품 데이터 (캐릭터/회차/복선) 설정집·백업 ───
+function workId(){ return localStorage.getItem('sv_activeWork') || 'default'; }
+function workName(){ return localStorage.getItem('sv_workName') || '내 작품'; }
+function readArr(k){ try{ const v=JSON.parse(localStorage.getItem(k)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+function workData(){
+  const id=workId();
+  return { chars:readArr('sv_chars_'+id), chapters:readArr('sv_chapters_'+id), threads:readArr('sv_threads_'+id) };
+}
+function renderWorkSummary(){
+  const d=workData();
+  document.getElementById('wd-summary').textContent =
+    `'${workName()}' — 캐릭터 ${d.chars.length}명 · 회차 ${d.chapters.length}개 · 복선/사건 ${d.threads.length}개`;
+}
+function dlFile(name, text, type){
+  const blob=new Blob([text],{type:type||'text/plain;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+window.downloadBible=function(){
+  const d=workData(); const nm=workName();
+  if(!d.chars.length&&!d.chapters.length&&!d.threads.length){ alert('내보낼 데이터가 없습니다. 캐릭터나 회차를 먼저 기록해보세요.'); return; }
+  const L=[];
+  L.push('「'+nm+'」 설정집'); L.push('생성: '+new Date().toLocaleString('ko-KR')+' · StoryVital'); L.push('');
+  if(d.chars.length){
+    L.push('══ 등장인물 ('+d.chars.length+'명) ══'); L.push('');
+    d.chars.forEach(c=>{
+      L.push('■ '+c.name+'  ['+(c.role||'-')+(c.archetype?' · '+c.archetype:'')+(c.firstChap?' · 첫 등장 '+c.firstChap:'')+']');
+      if(c.appearance)L.push('  외모: '+c.appearance);
+      if(c.personality)L.push('  성격: '+c.personality);
+      if(c.ability)L.push('  능력: '+c.ability);
+      if(c.backstory)L.push('  배경: '+c.backstory);
+      if((c.relations||[]).length)L.push('  관계: '+c.relations.map(r=>r.name+'('+(r.type||'-')+(r.closeness!=null?', 친밀도 '+r.closeness:'')+')').join(', '));
+      if((c.tags||[]).length)L.push('  태그: '+c.tags.join(', '));
+      L.push('');
+    });
+  }
+  if(d.chapters.length){
+    L.push('══ 회차 ('+d.chapters.length+'개) ══'); L.push('');
+    const SL={draft:'예정',writing:'집필 중',done:'완성',published:'연재됨'};
+    [...d.chapters].sort((a,b)=>(a.num||0)-(b.num||0)).forEach(ch=>{
+      L.push(String(ch.num||0).padStart(2,'0')+'화 '+(ch.title||'')+'  ['+(SL[ch.status]||ch.status||'-')+']');
+      if(ch.summary)L.push('  '+ch.summary);
+      if((ch.beats||[]).length)L.push('  핵심 사건: '+ch.beats.join(' / '));
+      L.push('');
+    });
+  }
+  if(d.threads.length){
+    L.push('══ 복선/사건 ('+d.threads.length+'개) ══'); L.push('');
+    const TL={planted:'투척됨',developing:'전개 중',resolved:'회수 완료'};
+    const cm={}; d.chapters.forEach(c=>cm[c.id]=c.num);
+    d.threads.forEach(t=>{
+      L.push('['+(TL[t.status]||t.status||'-')+'] '+t.title+(cm[t.chapterId]?' ('+cm[t.chapterId]+'화)':''));
+      if(t.desc)L.push('  '+t.desc);
+      L.push('');
+    });
+  }
+  dlFile('StoryVital_설정집_'+nm+'_'+new Date().toISOString().slice(0,10)+'.txt', L.join('\n'));
+};
+window.downloadBackup=function(){
+  const d=workData();
+  const backup={ app:'StoryVital', version:1, exportedAt:new Date().toISOString(),
+    work:{ id:workId(), name:workName() },
+    characters:d.chars, chapters:d.chapters, threads:d.threads };
+  dlFile('StoryVital_백업_'+workName()+'_'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify(backup,null,2), 'application/json');
+};
+window.importBackup=function(input){
+  const file=input.files&&input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const b=JSON.parse(e.target.result);
+      if(b.app!=='StoryVital'||!Array.isArray(b.characters)){ alert('StoryVital 백업 파일이 아닙니다.'); return; }
+      const d=workData();
+      const cur=d.chars.length+d.chapters.length+d.threads.length;
+      if(cur>0 && !confirm('현재 작품의 데이터(캐릭터 '+d.chars.length+'명 등)를 백업 내용으로 덮어쓸까요?')) return;
+      const id=workId();
+      localStorage.setItem('sv_chars_'+id, JSON.stringify(b.characters||[]));
+      localStorage.setItem('sv_chapters_'+id, JSON.stringify(b.chapters||[]));
+      localStorage.setItem('sv_threads_'+id, JSON.stringify(b.threads||[]));
+      renderWorkSummary();
+      alert('복원 완료! 캐릭터 '+(b.characters||[]).length+'명, 회차 '+(b.chapters||[]).length+'개를 불러왔습니다.');
+    }catch(err){ alert('파일을 읽을 수 없습니다: '+err.message); }
+    input.value='';
+  };
+  reader.readAsText(file);
+};
+
 window.addEventListener('load', () => {
+  renderWorkSummary();
   renderPlatformCards();
   renderPresets();
   renderTips();

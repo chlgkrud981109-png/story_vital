@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Scriptorium - Worldbuilding Workspace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "surface-variant": "#25252a",
+                "tertiary-dim": "#ef77a0",
+                "primary-container": "#a98fff",
+                "on-background": "#f0edf1",
+                "surface-container": "#19191d",
+                "tertiary-container": "#fc81ab",
+                "on-surface": "#f0edf1",
+                "surface-dim": "#0e0e11",
+                "inverse-on-surface": "#555458",
+                "on-secondary-fixed-variant": "#6834a6",
+                "secondary-container": "#5e289b",
+                "inverse-primary": "#6834eb",
+                "surface-tint": "#b6a0ff",
+                "error-container": "#a70138",
+                "outline-variant": "#48474b",
+                "on-primary-fixed": "#000000",
+                "error": "#ff6e84",
+                "surface": "#0e0e11",
+                "secondary-fixed-dim": "#d7b5ff",
+                "outline": "#767579",
+                "secondary": "#bc87fe",
+                "surface-container-lowest": "#000000",
+                "on-primary-fixed-variant": "#32008a",
+                "surface-bright": "#2c2c30",
+                "secondary-fixed": "#e2c7ff",
+                "primary-dim": "#7e51ff",
+                "on-surface-variant": "#acaaae",
+                "on-secondary-fixed": "#4a0b87",
+                "surface-container-highest": "#25252a",
+                "on-tertiary-container": "#59002b",
+                "on-error": "#490013",
+                "tertiary-fixed-dim": "#f57ca5",
+                "secondary-dim": "#ba85fb",
+                "on-tertiary": "#6a0936",
+                "on-primary-container": "#280072",
+                "primary-fixed-dim": "#9c7eff",
+                "inverse-surface": "#fcf8fd",
+                "primary": "#b6a0ff",
+                "on-tertiary-fixed-variant": "#70103b",
+                "surface-container-high": "#1f1f23",
+                "on-tertiary-fixed": "#380019",
+                "tertiary": "#ff97b8",
+                "on-secondary-container": "#e1c5ff",
+                "tertiary-fixed": "#ff8db2",
+                "on-primary": "#340090",
+                "background": "#0e0e11",
+                "surface-container-low": "#131316",
+                "on-error-container": "#ffb2b9",
+                "on-secondary": "#340064",
+                "primary-fixed": "#a98fff",
+                "error-dim": "#d73357"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+            },
+            "fontFamily": {
+                "headline": ["Manrope"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        display: inline-block;
+        line-height: 1;
+        text-transform: none;
+        letter-spacing: normal;
+        word-wrap: normal;
+        white-space: nowrap;
+        direction: ltr;
+      }
+      .glass-card {
+        background: rgba(25, 25, 29, 0.7);
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(126, 81, 255, 0.15);
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar -->
+<nav class="fixed top-0 right-0 left-0 h-16 bg-[#0e0e11] flex items-center justify-between px-6 w-full z-40 font-['Manrope'] antialiased">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tight text-white">The Scriptorium</span>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-95 text-sm">Drafts</a>
+<a class="text-[#7e51ff] font-bold hover:text-white transition-colors cursor-pointer active:scale-95 text-sm">Worldbuilding</a>
+<a class="text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-95 text-sm">Analytics</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-surface-container-low px-3 py-1.5 rounded-lg flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-xs w-48 text-on-surface-variant" placeholder="Search the archives..." type="text"/>
+</div>
+<span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-white transition-colors">timer</span>
+<span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-white transition-colors">notifications</span>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img alt="Author Profile" class="w-full h-full object-cover" data-alt="close-up portrait of a thoughtful author in a dark room with soft purple ambient light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgRaxXsc4fRpOvwcJMb2IS5vhnG_iOVexDcDtgmLWz8ZFF9xJPOgo2U89r15c7XfmZPDhSa_Hmpo-fB6xWkh7OQmZIkPZm7s_v_ErdazdqgaADuEHO1sJfxciXY5IcNW3vhsKmjsuaVXoN1R8-50uzzibNbnHVuR3f7D-MKMGg73rwLBMs8XwjUwqoR1gfRWIyueZsVJAqQM3d03UrIXeItC-vw5CVcYCKFZelQtGw7PCgaDGkpp6YQ43NMWpwlvrqv-vAmJ0Ku7-r"/>
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 bottom-0 w-64 h-full bg-[#131316] flex flex-col py-8 z-30 pt-20 shadow-[20px_0_50px_rgba(0,0,0,0.5)] font-['Manrope'] text-sm tracking-wide">
+<div class="px-6 mb-8">
+<h2 class="text-white font-black text-lg">Manuscript Alpha</h2>
+<p class="text-gray-500 text-xs uppercase tracking-widest">Drafting Phase</p>
+</div>
+<div class="flex-1 space-y-1">
+<div class="px-3">
+<div class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all cursor-pointer rounded-lg hover:translate-x-1 duration-200">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all cursor-pointer rounded-lg hover:translate-x-1 duration-200">
+<span class="material-symbols-outlined">library_books</span>
+<span>Library</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all cursor-pointer rounded-lg hover:translate-x-1 duration-200">
+<span class="material-symbols-outlined">auto_stories</span>
+<span>Chapters</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 bg-[#1f1f23] text-white border-l-2 border-[#ba85fb] transition-all cursor-pointer rounded-r-lg hover:translate-x-1 duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">public</span>
+<span>Worldbuilding</span>
+</div>
+</div>
+</div>
+<div class="mt-auto px-3 pt-4 border-t border-outline-variant/10">
+<div class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all cursor-pointer rounded-lg hover:translate-x-1 duration-200">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all cursor-pointer rounded-lg hover:translate-x-1 duration-200">
+<span class="material-symbols-outlined">help</span>
+<span>Help</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-20 p-8 min-h-screen">
+<header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h1 class="font-headline text-4xl font-extrabold text-white tracking-tight mb-2">The Atlas of Aetheria</h1>
+<p class="text-on-surface-variant font-body">Defining the geography, rules, and myths of your realm.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 bg-primary-dim text-on-primary-fixed px-5 py-2.5 rounded-lg font-bold hover:shadow-[0_0_12px_rgba(182,160,255,0.4)] transition-all active:scale-95">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>New Element</span>
+</button>
+</div>
+</header>
+<!-- Category Tabs -->
+<div class="flex items-center gap-1 mb-8 overflow-x-auto no-scrollbar pb-2">
+<button class="bg-surface-container-high text-white px-6 py-2.5 rounded-full font-label text-sm font-semibold border-b-2 border-secondary transition-all">Locations</button>
+<button class="text-on-surface-variant hover:bg-surface-container hover:text-white px-6 py-2.5 rounded-full font-label text-sm transition-all">Magic Systems</button>
+<button class="text-on-surface-variant hover:bg-surface-container hover:text-white px-6 py-2.5 rounded-full font-label text-sm transition-all">Lore &amp; Mythos</button>
+<button class="text-on-surface-variant hover:bg-surface-container hover:text-white px-6 py-2.5 rounded-full font-label text-sm transition-all">Items &amp; Relics</button>
+<button class="text-on-surface-variant hover:bg-surface-container hover:text-white px-6 py-2.5 rounded-full font-label text-sm transition-all">Societies</button>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- Map Widget (Large) -->
+<div class="md:col-span-8 bg-surface-container-low rounded-xl overflow-hidden glass-card h-[480px] relative group">
+<div class="absolute inset-0 opacity-40 mix-blend-overlay">
+<img alt="World Map" class="w-full h-full object-cover grayscale brightness-50" data-alt="detailed vintage fantasy world map with hand-drawn continents and nautical charts on aged parchment paper" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBN8D-QmrWgM0JkiiHhFWvXQ2-pO08OAttzl8s2VuOwtGP5RJI9FQl6fGCCwuZU8s-Q3yNoYrwDWPtMA1TNCoP0NZfcfDHez7tNgolD5hCTZ_fb8E4yAxZ4ROGb-xhIvvCZeQPcO3KKpIEusihvg65Cpe1nU6OXjFVKtg7aVcTRFfvf3XKAuiEZAwG87BZPKzXqgxd0lCGUfJsON2IiWuvdnA4-P31wl7KoAjf0jbv013qF7vSCs397IFuZZCYcgCVmmrO3TYGq1qye"/>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent"></div>
+<div class="absolute top-6 left-6 z-10">
+<div class="bg-surface-container-highest/80 backdrop-blur-md p-2 rounded-lg flex flex-col gap-2 shadow-xl">
+<button class="p-2 hover:bg-primary-dim hover:text-black rounded transition-colors text-white"><span class="material-symbols-outlined">add</span></button>
+<button class="p-2 hover:bg-primary-dim hover:text-black rounded transition-colors text-white"><span class="material-symbols-outlined">remove</span></button>
+<div class="h-px bg-outline-variant/30 mx-2"></div>
+<button class="p-2 hover:bg-primary-dim hover:text-black rounded transition-colors text-white"><span class="material-symbols-outlined">my_location</span></button>
+</div>
+</div>
+<div class="absolute bottom-6 left-6 right-6 flex items-end justify-between z-10">
+<div>
+<h3 class="text-2xl font-headline font-bold text-white mb-1">Interactive Atlas</h3>
+<p class="text-on-surface-variant text-sm">Current Region: The Shattered Isles</p>
+</div>
+<button class="bg-surface-bright/50 backdrop-blur-lg border border-primary/20 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-surface-bright transition-colors">
+<span class="material-symbols-outlined text-base">fullscreen</span>
+                        Expand Map
+                    </button>
+</div>
+<!-- Map Marker Sample -->
+<div class="absolute top-1/2 left-1/3 group/marker cursor-pointer">
+<div class="w-4 h-4 bg-primary-dim rounded-full shadow-[0_0_15px_#7e51ff] animate-pulse"></div>
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface-container-high p-3 rounded-lg border border-primary/30 w-48 opacity-0 group-hover/marker:opacity-100 transition-opacity pointer-events-none">
+<p class="text-white font-bold text-xs mb-1">Crystalline Spire</p>
+<p class="text-on-surface-variant text-[10px]">Ancient beacon of the First Kings. Deep magic resonance detected.</p>
+</div>
+</div>
+</div>
+<!-- Sidebar Stats / Quick Links (Asymmetric) -->
+<div class="md:col-span-4 flex flex-col gap-6">
+<!-- Magic System Pulse -->
+<div class="bg-surface-container-high p-6 rounded-xl border border-outline-variant/10 relative overflow-hidden h-1/2">
+<div class="absolute -top-10 -right-10 w-32 h-32 bg-secondary/10 blur-3xl rounded-full"></div>
+<h4 class="text-on-surface-variant font-label text-xs uppercase tracking-widest mb-4">Magic Resonance</h4>
+<div class="flex items-end gap-1 h-24 mb-6">
+<div class="flex-1 bg-primary-container/20 rounded-t-sm h-[40%]"></div>
+<div class="flex-1 bg-primary-container/40 rounded-t-sm h-[65%]"></div>
+<div class="flex-1 bg-primary-container/60 rounded-t-sm h-[50%]"></div>
+<div class="flex-1 bg-primary-dim rounded-t-sm h-[90%] shadow-[0_0_10px_rgba(126,81,255,0.5)]"></div>
+<div class="flex-1 bg-primary-container/40 rounded-t-sm h-[30%]"></div>
+<div class="flex-1 bg-primary-container/20 rounded-t-sm h-[55%]"></div>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-white text-sm font-semibold">The Weave Stability</span>
+<span class="text-tertiary text-sm font-bold">84%</span>
+</div>
+</div>
+<!-- Recent Lore Notes -->
+<div class="bg-surface-container-low p-6 rounded-xl h-1/2">
+<h4 class="text-on-surface-variant font-label text-xs uppercase tracking-widest mb-4">Timeline Hooks</h4>
+<ul class="space-y-4">
+<li class="flex items-start gap-3">
+<div class="w-1.5 h-1.5 rounded-full bg-tertiary mt-1.5"></div>
+<p class="text-xs text-on-surface leading-relaxed">The Fall of Lumina: Adding political fallout in the Southern Provinces.</p>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary mt-1.5"></div>
+<p class="text-xs text-on-surface leading-relaxed">Merchant's Guild: Updated trade routes through the Whispering Woods.</p>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-1.5 h-1.5 rounded-full bg-outline mt-1.5"></div>
+<p class="text-xs text-on-surface leading-relaxed">Draft: The Ritual of Sun-Binding (Magic System details needed).</p>
+</li>
+</ul>
+</div>
+</div>
+<!-- Detail Cards (Masonry-like) -->
+<div class="md:col-span-4 bg-surface-container-high rounded-xl overflow-hidden group border border-outline-variant/10">
+<div class="h-48 overflow-hidden">
+<img alt="Mountain Pass" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="jagged snow-capped mountain peaks under a dark violet night sky with glowing nebula clouds" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCG06INYHLhre9FJDifiKzxMNIXA---e2nd921WryANMj_SzAQXhaB_Qggelh3ko4eaDY2z7hqvXrGS65xx3Tqt2SLRUYtwsbALo0oF9EmucLqUA_GMHDShggdRfM6HLS0Im2H1ZDb_lctcsX9JWBiMN6MS18Xy6bo6M9JOsWyqMQMHn6iqXm9P__dN2YEiYL7zXc3KI0ACiapnMcbntwpLkyf7n7Vxb7KDo6C1_yANL7dqPZ8Xw-wO6NVEJ0mPWZXAVHD5u63lVsDb"/>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-center mb-2">
+<span class="text-[10px] bg-secondary-container/30 text-secondary-dim px-2 py-0.5 rounded uppercase font-bold tracking-tighter">Location</span>
+<span class="material-symbols-outlined text-gray-500 text-sm cursor-pointer hover:text-white">more_vert</span>
+</div>
+<h5 class="text-white font-headline font-bold text-lg mb-2">The Frost-Veil Pass</h5>
+<p class="text-on-surface-variant text-sm line-clamp-3 leading-relaxed">The only known passage through the Iron Reach. Guarded by the Wraith-Sentinels since the Great Freeze.</p>
+</div>
+</div>
+<div class="md:col-span-4 bg-surface-container-high rounded-xl overflow-hidden group border border-outline-variant/10">
+<div class="h-48 overflow-hidden">
+<img alt="Ancient Tome" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="macro photo of a floating crystal shard emitting blue light particles in a dark cavernous setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfvren9rS3n_ooMFJRacVJNU87boqeigzIR3k4xxQRR_G47tfQZgXYgZWc8fOXH8bTmytwAHwX_OgM7p_Dr9RQoHyJknLwZeOY_fzj7UQEYxR94521ZyqElknw__9HvFVgfcME59gDoV7fzuU348_xNinhrdxOqXF29JDSmEwc3jAfSUExEAo3-FjcidDUDnywfosx7gjWUDN31b_fjhAjCcL1zSrETdFbEcUcEXLX_Nw-Ce6dGAm-oWtHbYx8GDxW3DH66Mi-Hx1d"/>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-center mb-2">
+<span class="text-[10px] bg-primary-container/30 text-primary px-2 py-0.5 rounded uppercase font-bold tracking-tighter">Artifact</span>
+<span class="material-symbols-outlined text-gray-500 text-sm cursor-pointer hover:text-white">more_vert</span>
+</div>
+<h5 class="text-white font-headline font-bold text-lg mb-2">Aetheric Focal Point</h5>
+<p class="text-on-surface-variant text-sm line-clamp-3 leading-relaxed">A core fragment of the primordial sky-star. Capable of bending the rules of gravity within a five-mile radius.</p>
+</div>
+</div>
+<div class="md:col-span-4 bg-surface-container-high rounded-xl overflow-hidden group border border-outline-variant/10">
+<div class="h-48 overflow-hidden">
+<img alt="Savanna Ruins" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="overgrown stone ruins of a majestic library at sunset with orange light filtering through cracked pillars" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQ3R6xcgIO6ly1dpzhtABlghd2-KfQsGySYfCsUFAgommUZrOxY3B2Fu6DYiT4-8UfUAgn2sud9_ZKhPinmVj9AzDHVFLH_7zIdUGJyrPRmyg00jOoo5n0vMwjou2i8SLXUYTJXTVZETfG-WA2Df4m3945XsE6IVYRdAQxHIcXhEO4jBSVpruu0ZTTemR_M-XMRSFvqnUSFYp27v-SewUy_BrSMM0ognmMbO2MKXILNVGgvT7pMyuTR6ZJkSWcw0sUO6TeOWWLLKOq"/>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-center mb-2">
+<span class="text-[10px] bg-tertiary-container/30 text-tertiary px-2 py-0.5 rounded uppercase font-bold tracking-tighter">Lore</span>
+<span class="material-symbols-outlined text-gray-500 text-sm cursor-pointer hover:text-white">more_vert</span>
+</div>
+<h5 class="text-white font-headline font-bold text-lg mb-2">The Silence of Oakhaven</h5>
+<p class="text-on-surface-variant text-sm line-clamp-3 leading-relaxed">Historical record of the night every living creature in Oakhaven stopped speaking simultaneously.</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Focus Ribbon (App Specific Component) -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 glass-card rounded-full flex items-center gap-8 z-50 shadow-2xl">
+<div class="flex items-center gap-3 border-r border-outline-variant/30 pr-8">
+<span class="material-symbols-outlined text-primary">description</span>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold leading-none mb-1">World Density</p>
+<p class="text-sm text-white font-bold leading-none">12,402 Entities</p>
+</div>
+</div>
+<div class="flex items-center gap-3 pr-8 border-r border-outline-variant/30">
+<span class="material-symbols-outlined text-secondary">explore</span>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold leading-none mb-1">Map Coverage</p>
+<p class="text-sm text-white font-bold leading-none">62% Discovered</p>
+</div>
+</div>
+<button class="flex items-center gap-2 text-tertiary hover:text-white transition-colors">
+<span class="material-symbols-outlined text-base">shutter_speed</span>
+<span class="text-sm font-semibold">Start World Sprint</span>
+</button>
+</div>
+</body></html>

@@ -3,54 +3,71 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<script>if(!localStorage.getItem('sv_user'))location.replace('index.html');</script>
 <title>챕터 트래커 — StoryVital</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&family=Noto+Serif+KR:wght@300;400;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 
 <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-  import { firebaseConfig } from './firebase-config.js';
-  import * as DB from './src/firebase/db.js';
-
-  let db, auth;
+  // 설정은 firebase.js 한 곳에서만 관리 (file:// 실행 시엔 로컬 모드로 동작)
+  let db = null, auth = null;
   try {
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    auth = getAuth(app);
+    const FB = await import('./firebase.js');
+    if (FB.isConfigured) { db = FB.getDB(); auth = FB.getAuthI(); }
   } catch(e) {}
 
   window.addEventListener('load', () => {
     if (!auth) { window.loadDemoData(); return; }
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, (user) => {
       if (user) {
         window.currentUser = user;
-        const workId = localStorage.getItem('sv_activeWork') || 'default';
-        DB.subscribeToTimelineEvents(workId, events => {
-          appState.chapters = events.filter(e => e.type === 'chapter');
-          appState.threads = events.filter(e => e.type === 'thread');
-          if (!appState.selectedChapterId && appState.chapters.length) {
-            appState.selectedChapterId = appState.chapters[0].id;
-          }
-          renderAll();
-        });
-      } else { window.loadDemoData(); }
+        loadChapters(user.uid);
+      } else {
+        window.loadDemoData();
+      }
     });
   });
 
-  window.saveChapterToDb = async (ch) => {
-    if (!window.currentUser) return;
-    const workId = localStorage.getItem('sv_activeWork') || 'default';
-    await DB.saveTimelineEvent({ ...ch, type: 'chapter' }, window.currentUser.uid, workId);
+  async function loadChapters(uid) {
+    try {
+      const ref = collection(db, 'users', uid, 'chapters');
+      onSnapshot(ref, (snap) => {
+        if (snap.empty) { window.loadDemoData(); return; }
+        const chapters = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        window.appState.chapters = chapters;
+        window.renderAll();
+      });
+    } catch(e) { window.loadDemoData(); }
+  }
+
+  window.saveChapterToDb = async function(chapter) {
+    if (!window.currentUser || !db) return;
+    try {
+      const ref = collection(db, 'users', window.currentUser.uid, 'chapters');
+      if (chapter.id && !chapter.id.startsWith('demo')) {
+        await updateDoc(doc(db, 'users', window.currentUser.uid, 'chapters', chapter.id), chapter);
+      } else {
+        const docRef = await addDoc(ref, chapter);
+        chapter.id = docRef.id;
+      }
+    } catch(e) { console.log('Save failed, local only'); }
   };
 
-  window.saveThreadToDb = async (th) => {
-    if (!window.currentUser) return;
-    const workId = localStorage.getItem('sv_activeWork') || 'default';
-    await DB.saveTimelineEvent({ ...th, type: 'thread' }, window.currentUser.uid, workId);
+  window.saveThreadToDb = async function(thread) {
+    if (!window.currentUser || !db) return;
+    try {
+      const ref = collection(db, 'users', window.currentUser.uid, 'threads');
+      if (thread.id && !thread.id.startsWith('demo')) {
+        await updateDoc(doc(db, 'users', window.currentUser.uid, 'threads', thread.id), thread);
+      } else {
+        const docRef = await addDoc(ref, thread);
+        thread.id = docRef.id;
+      }
+    } catch(e) {}
   };
 </script>
 
@@ -123,10 +140,11 @@
       <span class="font-display font-bold text-white text-lg">StoryVital</span>
     </a>
     <div class="hidden md:flex items-center gap-6 text-sm">
-      <a href="./index.html" class="text-on-surface-variant hover:text-on-surface transition-colors">대시보드</a>
-      <a href="./characters.html" class="text-on-surface-variant hover:text-on-surface transition-colors">캐릭터</a>
-      <a href="./chapters.html" class="nav-active font-semibold">챕터 트래커</a>
-      <a href="./export.html" class="text-on-surface-variant hover:text-on-surface transition-colors">내보내기</a>
+      <a href="index.html" class="text-on-surface-variant hover:text-on-surface transition-colors">대시보드</a>
+      <a href="characters.html" class="text-on-surface-variant hover:text-on-surface transition-colors">캐릭터</a>
+      <a href="relations.html" class="text-on-surface-variant hover:text-on-surface transition-colors">관계도</a>
+      <a href="chapters.html" class="nav-active font-semibold">챕터 트래커</a>
+      <a href="export.html" class="text-on-surface-variant hover:text-on-surface transition-colors">내보내기</a>
     </div>
   </div>
   <div class="flex items-center gap-3">
@@ -147,16 +165,19 @@
       <p class="text-xs text-on-surface-variant mt-0.5">집필 중</p>
     </div>
     <nav class="flex-1 px-2 space-y-1 text-sm">
-      <a href="./index.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
+      <a href="index.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
         <span class="mat-icon text-lg">dashboard</span><span>대시보드</span>
       </a>
-      <a href="./characters.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
+      <a href="characters.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
         <span class="mat-icon text-lg">group</span><span>캐릭터 DB</span>
       </a>
-      <a href="./chapters.html" class="sidebar-active flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all">
+      <a href="relations.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
+        <span class="mat-icon text-lg">hub</span><span>관계도</span>
+      </a>
+      <a href="chapters.html" class="sidebar-active flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all">
         <span class="mat-icon text-lg">format_list_bulleted</span><span>챕터 트래커</span>
       </a>
-      <a href="./export.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
+      <a href="export.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-on-surface transition-all">
         <span class="mat-icon text-lg">upload_file</span><span>내보내기</span>
       </a>
     </nav>
@@ -219,7 +240,11 @@
                   <div class="text-xs text-outline uppercase tracking-wider mb-1">선택된 회차</div>
                   <h2 id="detail-title" class="font-display font-bold text-white text-lg"></h2>
                 </div>
-                <div id="detail-status"></div>
+                <div class="flex items-center gap-2">
+                  <div id="detail-status"></div>
+                  <button onclick="openEditChapter()" title="회차 수정" class="mat-icon text-outline hover:text-on-surface transition-colors text-lg">edit</button>
+                  <button onclick="deleteChapter()" title="회차 삭제" class="mat-icon transition-colors text-lg" style="color:#e8587a;opacity:0.7" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">delete</button>
+                </div>
               </div>
               <p id="detail-summary" class="text-sm text-on-surface-variant leading-relaxed mb-4"></p>
               <div id="detail-beats" class="space-y-2"></div>
@@ -291,16 +316,19 @@
 <!-- MOBILE NAV -->
 <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around"
   style="background: rgba(10,10,14,0.95); border-top: 1px solid rgba(184,162,255,0.08)">
-  <a href="./index.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
+  <a href="index.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
     <span class="mat-icon text-xl">dashboard</span><span class="text-xs">홈</span>
   </a>
-  <a href="./characters.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
+  <a href="characters.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
     <span class="mat-icon text-xl">group</span><span class="text-xs">캐릭터</span>
   </a>
-  <a href="./chapters.html" class="flex flex-col items-center gap-1 text-primary">
+  <a href="relations.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
+    <span class="mat-icon text-xl">hub</span><span class="text-xs">관계도</span>
+  </a>
+  <a href="chapters.html" class="flex flex-col items-center gap-1 text-primary">
     <span class="mat-icon text-xl">auto_stories</span><span class="text-xs">챕터</span>
   </a>
-  <a href="./export.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
+  <a href="export.html" class="flex flex-col items-center gap-1 text-on-surface-variant">
     <span class="mat-icon text-xl">upload_file</span><span class="text-xs">내보내기</span>
   </a>
 </nav>
@@ -309,7 +337,8 @@
 <div id="chapter-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center modal-overlay"
   onclick="if(event.target===this)this.classList.add('hidden')">
   <div class="glass-bright rounded-2xl p-6 w-full max-w-lg mx-4" onclick="event.stopPropagation()">
-    <h2 class="font-display font-bold text-white text-lg mb-5">새 회차 추가</h2>
+    <h2 class="font-display font-bold text-white text-lg mb-5" id="chap-modal-title">새 회차 추가</h2>
+    <input type="hidden" id="edit-chap-id"/>
     <div class="space-y-4">
       <div class="grid grid-cols-2 gap-3">
         <div>
@@ -343,7 +372,7 @@
     <div class="flex gap-3 mt-5">
       <button onclick="document.getElementById('chapter-modal').classList.add('hidden')"
         class="flex-1 rounded-xl py-2.5 text-sm text-on-surface-variant" style="border: 1px solid rgba(184,162,255,0.1)">취소</button>
-      <button onclick="addChapter()" class="flex-1 bg-primary-dim text-white rounded-xl py-2.5 text-sm font-semibold">추가하기</button>
+      <button onclick="addChapter()" id="chap-modal-submit" class="flex-1 bg-primary-dim text-white rounded-xl py-2.5 text-sm font-semibold">추가하기</button>
     </div>
   </div>
 </div>
@@ -352,7 +381,8 @@
 <div id="thread-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center modal-overlay"
   onclick="if(event.target===this)this.classList.add('hidden')">
   <div class="glass-bright rounded-2xl p-6 w-full max-w-md mx-4" onclick="event.stopPropagation()">
-    <h2 class="font-display font-bold text-white text-lg mb-5">복선/사건 추가</h2>
+    <h2 class="font-display font-bold text-white text-lg mb-5" id="thread-modal-title">복선/사건 추가</h2>
+    <input type="hidden" id="edit-thread-id"/>
     <div class="space-y-4">
       <div>
         <label class="text-xs text-outline uppercase tracking-wider block mb-2">제목</label>
@@ -382,7 +412,7 @@
     <div class="flex gap-3 mt-5">
       <button onclick="document.getElementById('thread-modal').classList.add('hidden')"
         class="flex-1 rounded-xl py-2.5 text-sm text-on-surface-variant" style="border: 1px solid rgba(184,162,255,0.1)">취소</button>
-      <button onclick="addThread()" class="flex-1 bg-primary-dim text-white rounded-xl py-2.5 text-sm font-semibold">추가하기</button>
+      <button onclick="addThread()" id="thread-modal-submit" class="flex-1 bg-primary-dim text-white rounded-xl py-2.5 text-sm font-semibold">추가하기</button>
     </div>
   </div>
 </div>
@@ -404,8 +434,37 @@
     published: { label: '연재됨', cls: 'text-green-400 border-green-400/30', bg: 'bg-green-400/10' },
   };
 
+  // ─── localStorage 영속화 ──────────────────────────────
+  function chaptersStorageKey() { return 'sv_chapters_' + (localStorage.getItem('sv_activeWork') || 'default'); }
+  function threadsStorageKey() { return 'sv_threads_' + (localStorage.getItem('sv_activeWork') || 'default'); }
+  window.saveChaptersLocal = function() {
+    try {
+      localStorage.setItem(chaptersStorageKey(), JSON.stringify(appState.chapters));
+      localStorage.setItem(threadsStorageKey(), JSON.stringify(appState.threads));
+    } catch(e) {}
+  try { const pd=n=>String(n).padStart(2,'0'), t=new Date(), ds=t.getFullYear()+'-'+pd(t.getMonth()+1)+'-'+pd(t.getDate());
+    const days=JSON.parse(localStorage.getItem('sv_record_days')||'{}'); days[ds]=1;
+    localStorage.setItem('sv_record_days',JSON.stringify(days)); } catch(e) {}
+  };
+  function loadChaptersLocal() {
+    try {
+      const ch = JSON.parse(localStorage.getItem(chaptersStorageKey()) || 'null');
+      const th = JSON.parse(localStorage.getItem(threadsStorageKey()) || 'null');
+      if (Array.isArray(ch)) return { chapters: ch, threads: Array.isArray(th) ? th : [] };
+    } catch(e) {}
+    return null;
+  }
+
   // ─── Demo Data ──────────────────────────────
   window.loadDemoData = function() {
+    const local = loadChaptersLocal();
+    if (local) {
+      appState.chapters = local.chapters;
+      appState.threads = local.threads;
+      appState.selectedChapterId = appState.chapters[0]?.id || null;
+      renderAll();
+      return;
+    }
     appState.chapters = [
       { id: 'demo1', num: 36, title: '균열의 전야', status: 'published', summary: '주인공이 폐허 광산 지하에서 이상한 마석 균열을 발견한다. 동행한 서이안이 갑자기 경련을 일으키며 "또 시작됐다"고 중얼거린다.', beats: ['마석 균열 발견', '서이안 예지 발동'] },
       { id: 'demo2', num: 37, title: '예언자의 경고', status: 'published', summary: '서이안이 꿈에서 본 것을 털어놓는다. 마계의 봉인이 3일 후 풀린다는 내용. 주인공은 믿지 않지만 강민혁 백작이 현장에 나타난다.', beats: ['서이안 예지 공개', '강민혁 등장'] },
@@ -436,22 +495,26 @@
       const s = STATUS_MAP[ch.status] || STATUS_MAP.draft;
       const isActive = ch.id === appState.selectedChapterId;
       return `<div onclick="selectChapter('${ch.id}')"
-        class="chapter-item px-4 py-3 cursor-pointer ${isActive ? 'chapter-active' : ''} rounded-lg mx-2 mb-1 group relative">
+        class="chapter-item px-4 py-3 cursor-pointer ${isActive ? 'chapter-active' : ''} rounded-lg mx-2 mb-1">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-on-surface-variant">${String(ch.num).padStart(2,'0')}화</span>
-          <div class="flex items-center gap-1">
-            <span class="text-xs px-2 py-0.5 rounded-full ${s.cls} ${s.bg}" style="border-width:1px;border-style:solid">${s.label}</span>
-            <button onclick="event.stopPropagation();window.deleteChapter('${ch.id}')" class="mat-icon text-base text-outline hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">delete</button>
-          </div>
+          <span class="text-xs px-2 py-0.5 rounded-full ${s.cls} ${s.bg}" style="border-width:1px;border-style:solid">${s.label}</span>
         </div>
-        <p class="text-sm font-semibold text-on-surface mt-0.5 truncate pr-6">${ch.title}</p>
+        <p class="text-sm font-semibold text-on-surface mt-0.5 truncate">${ch.title}</p>
       </div>`;
     }).join('');
   }
 
   function renderChapterDetail() {
     const ch = appState.chapters.find(c => c.id === appState.selectedChapterId);
-    if (!ch) return;
+    if (!ch) {
+      document.getElementById('detail-title').textContent = '회차가 없습니다';
+      document.getElementById('detail-summary').textContent = '왼쪽 상단의 [회차 추가] 버튼으로 첫 회차를 만들어보세요.';
+      document.getElementById('detail-status').innerHTML = '';
+      document.getElementById('detail-beats').innerHTML = '';
+      document.getElementById('chapter-threads').innerHTML = '';
+      return;
+    }
     document.getElementById('detail-title').textContent = `${String(ch.num).padStart(2,'0')}화 · ${ch.title}`;
     document.getElementById('detail-summary').textContent = ch.summary || '줄거리가 아직 없습니다.';
 
@@ -481,7 +544,7 @@
   function threadCard(t, compact = false) {
     const statusCls = { planted: 's-planted', developing: 's-developing', resolved: 's-resolved' };
     const statusLabel = { planted: '투척됨', developing: '전개 중', resolved: '회수됨' };
-    return `<div id="thread-${t.id}" class="thread-card glass rounded-xl p-3 group relative" draggable="true"
+    return `<div id="thread-${t.id}" class="thread-card glass rounded-xl p-3" draggable="true"
       ondragstart="onDragStart(event, '${t.id}')">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
@@ -492,9 +555,10 @@
           <p class="text-sm font-semibold text-on-surface">${t.title}</p>
           ${t.desc && !compact ? `<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">${t.desc}</p>` : ''}
         </div>
-        <div class="flex flex-col gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-all">
-          <button onclick="cycleThreadStatus('${t.id}')" class="mat-icon text-outline hover:text-on-surface text-base">sync</button>
-          <button onclick="window.deleteThread('${t.id}')" class="mat-icon text-outline hover:text-red-400 text-base">delete</button>
+        <div class="flex items-center gap-1 shrink-0">
+          <button onclick="cycleThreadStatus('${t.id}')" title="상태 변경" class="mat-icon text-outline hover:text-on-surface transition-colors text-base">sync</button>
+          <button onclick="openEditThread('${t.id}')" title="수정" class="mat-icon text-outline hover:text-on-surface transition-colors text-base">edit</button>
+          <button onclick="deleteThread('${t.id}')" title="삭제" class="mat-icon transition-colors text-base" style="color:#e8587a;opacity:0.6" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">delete</button>
         </div>
       </div>
     </div>`;
@@ -526,13 +590,82 @@
   };
 
   window.openAddChapter = function() {
+    document.getElementById('edit-chap-id').value = '';
+    document.getElementById('chap-modal-title').textContent = '새 회차 추가';
+    document.getElementById('chap-modal-submit').textContent = '추가하기';
     const next = Math.max(...appState.chapters.map(c => c.num), 0) + 1;
     document.getElementById('new-chap-num').value = next;
+    document.getElementById('new-chap-title').value = '';
+    document.getElementById('new-chap-summary').value = '';
+    document.getElementById('new-chap-beats').value = '';
+    document.getElementById('new-chap-status').value = 'draft';
     document.getElementById('chapter-modal').classList.remove('hidden');
   };
 
+  window.openEditChapter = function() {
+    const ch = appState.chapters.find(c => c.id === appState.selectedChapterId);
+    if (!ch) return;
+    document.getElementById('edit-chap-id').value = ch.id;
+    document.getElementById('chap-modal-title').textContent = `${String(ch.num).padStart(2,'0')}화 수정`;
+    document.getElementById('chap-modal-submit').textContent = '저장하기';
+    document.getElementById('new-chap-num').value = ch.num;
+    document.getElementById('new-chap-title').value = ch.title === '(제목 없음)' || ch.title === '(집필 예정)' ? '' : ch.title;
+    document.getElementById('new-chap-status').value = ch.status;
+    document.getElementById('new-chap-summary').value = ch.summary || '';
+    document.getElementById('new-chap-beats').value = (ch.beats || []).join(', ');
+    document.getElementById('chapter-modal').classList.remove('hidden');
+  };
+
+  window.deleteChapter = function() {
+    const ch = appState.chapters.find(c => c.id === appState.selectedChapterId);
+    if (!ch) return;
+    const threadCount = appState.threads.filter(t => t.chapterId === ch.id).length;
+    const msg = threadCount
+      ? `${String(ch.num).padStart(2,'0')}화 '${ch.title}'을(를) 삭제할까요?\n연결된 복선/사건 ${threadCount}개도 함께 삭제됩니다.`
+      : `${String(ch.num).padStart(2,'0')}화 '${ch.title}'을(를) 삭제할까요?`;
+    if (!confirm(msg)) return;
+    appState.threads = appState.threads.filter(t => t.chapterId !== ch.id);
+    appState.chapters = appState.chapters.filter(c => c.id !== ch.id);
+    appState.selectedChapterId = appState.chapters[0]?.id || null;
+    saveChaptersLocal();
+    renderAll();
+  };
+
   window.openAddThread = function() {
+    document.getElementById('edit-thread-id').value = '';
+    document.getElementById('thread-modal-title').textContent = '복선/사건 추가';
+    document.getElementById('thread-modal-submit').textContent = '추가하기';
+    document.getElementById('new-thread-title').value = '';
+    document.getElementById('new-thread-desc').value = '';
+    document.getElementById('new-thread-status').value = 'planted';
     document.getElementById('thread-modal').classList.remove('hidden');
+  };
+
+  window.openEditThread = function(id) {
+    const t = appState.threads.find(t => t.id === id);
+    if (!t) return;
+    document.getElementById('edit-thread-id').value = t.id;
+    document.getElementById('thread-modal-title').textContent = '복선/사건 수정';
+    document.getElementById('thread-modal-submit').textContent = '저장하기';
+    document.getElementById('new-thread-title').value = t.title;
+    document.getElementById('new-thread-desc').value = t.desc || '';
+    document.getElementById('new-thread-status').value = t.status;
+    appState.threadType = t.type || '복선';
+    document.querySelectorAll('.thread-type-btn').forEach(b => {
+      const active = b.textContent.trim() === appState.threadType;
+      b.className = 'thread-type-btn flex-1 py-2 rounded-xl text-xs font-semibold ' + (active ? 's-planted' : 'text-on-surface-variant');
+      b.style.border = active ? '' : '1px solid rgba(184,162,255,0.15)';
+    });
+    document.getElementById('thread-modal').classList.remove('hidden');
+  };
+
+  window.deleteThread = function(id) {
+    const t = appState.threads.find(t => t.id === id);
+    if (!t) return;
+    if (!confirm(`'${t.title}'을(를) 삭제할까요?`)) return;
+    appState.threads = appState.threads.filter(x => x.id !== id);
+    saveChaptersLocal();
+    renderAll();
   };
 
   window.addChapter = function() {
@@ -543,62 +676,73 @@
     const beatsRaw = document.getElementById('new-chap-beats').value;
     const beats = beatsRaw ? beatsRaw.split(',').map(b => b.trim()).filter(Boolean) : [];
 
-    const ch = { id: 'ch-' + Date.now(), num, title, status, summary, beats };
-    appState.chapters.push(ch);
+    const editId = document.getElementById('edit-chap-id').value;
+    let ch;
+    if (editId) {
+      ch = appState.chapters.find(c => c.id === editId);
+      if (!ch) return;
+      Object.assign(ch, { num, title, status, summary, beats });
+    } else {
+      ch = { id: 'ch-' + Date.now(), num, title, status, summary, beats };
+      appState.chapters.push(ch);
+    }
     appState.chapters.sort((a,b) => a.num - b.num);
     appState.selectedChapterId = ch.id;
 
     window.saveChapterToDb && window.saveChapterToDb(ch);
+    saveChaptersLocal();
     renderAll();
     document.getElementById('chapter-modal').classList.add('hidden');
-    document.getElementById('new-chap-title').value = '';
-    document.getElementById('new-chap-summary').value = '';
-    document.getElementById('new-chap-beats').value = '';
   };
 
   window.addThread = function() {
     const title = document.getElementById('new-thread-title').value.trim();
     if (!title) return;
-    const thread = {
-      id: 'th-' + Date.now(),
-      title,
-      desc: document.getElementById('new-thread-desc').value.trim(),
-      type: appState.threadType,
-      status: document.getElementById('new-thread-status').value,
-      chapterId: appState.selectedChapterId,
-    };
-    appState.threads.push(thread);
+    const editId = document.getElementById('edit-thread-id').value;
+    let thread;
+    if (editId) {
+      thread = appState.threads.find(t => t.id === editId);
+      if (!thread) return;
+      Object.assign(thread, {
+        title,
+        desc: document.getElementById('new-thread-desc').value.trim(),
+        type: appState.threadType,
+        status: document.getElementById('new-thread-status').value,
+      });
+    } else {
+      thread = {
+        id: 'th-' + Date.now(),
+        title,
+        desc: document.getElementById('new-thread-desc').value.trim(),
+        type: appState.threadType,
+        status: document.getElementById('new-thread-status').value,
+        chapterId: appState.selectedChapterId,
+      };
+      appState.threads.push(thread);
+    }
     window.saveThreadToDb && window.saveThreadToDb(thread);
+    saveChaptersLocal();
     renderAll();
     document.getElementById('thread-modal').classList.add('hidden');
-    document.getElementById('new-thread-title').value = '';
-    document.getElementById('new-thread-desc').value = '';
   };
 
   window.cycleThreadStatus = function(id) {
     const t = appState.threads.find(t => t.id === id);
     if (!t) return;
     const cycle = ['planted','developing','resolved'];
-    const idx = cycle.indexOf(t.status);
-    t.status = cycle[(idx + 1) % cycle.length];
+    t.status = cycle[(cycle.indexOf(t.status) + 1) % cycle.length];
     window.saveThreadToDb && window.saveThreadToDb(t);
+    saveChaptersLocal();
     renderAll();
   };
 
-  window.deleteChapter = async function(id) {
-    if (!confirm('회차를 삭제하시겠습니까? 관련 복선 데이터는 유지되지만 회차 연결이 끊어질 수 있습니다.')) return;
-    await DB.deleteTimelineEvent(id);
-    appState.chapters = appState.chapters.filter(c => c.id !== id);
-    if (appState.selectedChapterId === id) appState.selectedChapterId = appState.chapters[0]?.id || null;
-    renderAll();
-  };
-
-  window.deleteThread = async function(id) {
-    if (!confirm('복선을 삭제하시겠습니까?')) return;
-    await DB.deleteTimelineEvent(id);
-    appState.threads = appState.threads.filter(t => t.id !== id);
-    renderAll();
-  };
+  // ESC로 모달 닫기
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.getElementById('chapter-modal').classList.add('hidden');
+      document.getElementById('thread-modal').classList.add('hidden');
+    }
+  });
 
   window.setThreadType = function(el, type) {
     appState.threadType = type;
@@ -622,6 +766,7 @@
     if (t) {
       t.status = status;
       window.saveThreadToDb && window.saveThreadToDb(t);
+      saveChaptersLocal();
       renderAll();
     }
     draggedId = null;

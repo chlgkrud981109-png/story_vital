@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<script>if(!localStorage.getItem('sv_user'))location.replace('index.html');</script>
+<title>관계도 — StoryVital</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+
+<script>
+  tailwind.config = {
+    darkMode:'class',
+    theme: { extend: { colors: { surface:'#09090d','surface-low':'#0e0e13','surface-mid':'#141419','surface-high':'#1a1a21','surface-bright':'#22222b',primary:'#b8a2ff','primary-dim':'#7c50ff',secondary:'#c490ff','secondary-dim':'#9d60f0',tertiary:'#ff9bbf','tertiary-dim':'#e8587a',success:'#40d0a8',outline:'#5e5b68','outline-variant':'#36333f','on-surface':'#eae6f4','on-surface-variant':'#9e9aaa' }, fontFamily:{ display:['Manrope','sans-serif'] } } }
+  };
+</script>
+
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+.mat-icon { font-family:'Material Symbols Outlined'; font-style:normal; user-select:none; line-height:1; }
+body { background:#09090d; color:#eae6f4; font-family:'Manrope',sans-serif; overflow:hidden; }
+.glass-bright { background:rgba(26,26,33,0.85); backdrop-filter:blur(24px); border:1px solid rgba(184,162,255,0.12); }
+.nav-link { color:#9e9aaa; transition:color 0.15s; }
+.nav-link:hover { color:#eae6f4; }
+.nav-active { color:#b8a2ff !important; }
+.sidebar-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; color:#9e9aaa; font-size:14px; transition:all 0.15s; cursor:pointer; text-decoration:none; }
+.sidebar-item:hover { background:rgba(255,255,255,0.04); color:#eae6f4; }
+.sidebar-active { background:rgba(124,80,255,0.15); color:#b8a2ff; border-left:2px solid #7c50ff; padding-left:10px; }
+
+/* Graph canvas */
+#graph-wrap { position:absolute; inset:0; top:0; }
+#graph-svg { width:100%; height:100%; display:block; cursor:grab; }
+#graph-svg.dragging { cursor:grabbing; }
+.node-g { cursor:pointer; }
+.node-g circle.body { transition:filter 0.2s; }
+.node-g:hover circle.body { filter:brightness(1.25); }
+.edge-label { font-size:11px; font-weight:600; fill:#9e9aaa; paint-order:stroke; stroke:#09090d; stroke-width:4px; pointer-events:none; }
+.node-name { font-size:12px; font-weight:700; fill:#eae6f4; text-anchor:middle; paint-order:stroke; stroke:#09090d; stroke-width:4px; pointer-events:none; }
+.node-role { font-size:10px; fill:#9e9aaa; text-anchor:middle; paint-order:stroke; stroke:#09090d; stroke-width:3px; pointer-events:none; }
+.dimmed { opacity:0.12; transition:opacity 0.25s; }
+.undimmed { opacity:1; transition:opacity 0.25s; }
+
+/* Info panel */
+.info-panel { position:fixed; right:16px; top:80px; width:300px; z-index:150; border-radius:16px; background:rgba(14,14,19,0.92); backdrop-filter:blur(20px); border:1px solid rgba(184,162,255,0.12); box-shadow:0 20px 50px rgba(0,0,0,0.5); display:none; max-height:calc(100vh - 160px); overflow-y:auto; }
+.info-panel.open { display:block; }
+.relation-row { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; background:rgba(0,0,0,0.3); margin-bottom:6px; }
+
+/* Legend */
+.legend { position:fixed; left:16px; bottom:80px; z-index:120; border-radius:14px; padding:12px 14px; background:rgba(14,14,19,0.85); backdrop-filter:blur(16px); border:1px solid rgba(184,162,255,0.1); }
+@media(min-width:1024px) { .legend { left:240px; bottom:20px; } }
+
+.ctrl-btn { display:flex; align-items:center; gap:6px; padding:7px 12px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s; border:1px solid rgba(184,162,255,0.15); color:#9e9aaa; background:rgba(14,14,19,0.85); backdrop-filter:blur(16px); }
+.ctrl-btn:hover { color:#eae6f4; border-color:rgba(184,162,255,0.3); }
+.ctrl-btn.active { background:rgba(124,80,255,0.2); color:#b8a2ff; border-color:rgba(124,80,255,0.4); }
+
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-thumb { background:rgba(184,162,255,0.18); border-radius:4px; }
+
+@media(min-width:1024px) { .sidebar-desktop{display:flex} .ml-sidebar{margin-left:224px} }
+@media(max-width:1023px) { .sidebar-desktop{display:none} .ml-sidebar{margin-left:0} }
+</style>
+</head>
+
+<body>
+
+<!-- NAV -->
+<nav class="fixed top-0 left-0 right-0 z-[100] h-16 glass-bright flex items-center justify-between px-4 lg:px-6">
+  <div class="flex items-center gap-3">
+    <a href="index.html" class="flex items-center gap-2">
+      <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#7c50ff,#b8a2ff)">
+        <span class="mat-icon text-white" style="font-size:14px">auto_stories</span>
+      </div>
+      <span class="font-display font-extrabold text-white text-base hidden sm:block">StoryVital</span>
+    </a>
+    <div class="hidden lg:flex items-center gap-5 ml-4" style="font-size:14px">
+      <a href="index.html" class="nav-link">대시보드</a>
+      <a href="characters.html" class="nav-link">캐릭터</a>
+      <a href="relations.html" class="nav-active font-semibold">관계도</a>
+      <a href="chapters.html" class="nav-link">챕터 트래커</a>
+      <a href="export.html" class="nav-link">내보내기</a>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <div class="hidden sm:flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm" style="background:rgba(255,255,255,0.04);border:1px solid rgba(184,162,255,0.1)">
+      <span class="mat-icon text-sm" style="color:#b8a2ff;font-size:15px">book</span>
+      <span class="text-white font-semibold text-xs" id="nav-work-name">-</span>
+    </div>
+    <img src="https://api.dicebear.com/7.x/initials/svg?seed=작가&backgroundColor=7c50ff"
+      alt="" class="w-8 h-8 rounded-full object-cover" style="border:1px solid rgba(124,80,255,0.4)"/>
+  </div>
+</nav>
+
+<!-- SIDEBAR -->
+<aside class="sidebar-desktop fixed left-0 top-16 bottom-0 w-56 flex-col py-5 z-50" style="background:#0e0e13;border-right:1px solid rgba(184,162,255,0.06)">
+  <div class="px-4 mb-4">
+    <p class="text-xs uppercase tracking-widest mb-1" style="color:#5e5b68">현재 작품</p>
+    <p class="font-display font-bold text-white text-sm" id="sidebar-work-name">-</p>
+  </div>
+  <nav class="flex-1 px-2 space-y-0.5">
+    <a href="index.html" class="sidebar-item"><span class="mat-icon text-lg">dashboard</span>대시보드</a>
+    <a href="characters.html" class="sidebar-item"><span class="mat-icon text-lg">group</span>캐릭터 DB</a>
+    <a href="relations.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">hub</span>관계도</a>
+    <a href="chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
+    <a href="export.html" class="sidebar-item"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<main class="ml-sidebar pt-16 relative" style="height:100vh">
+
+  <!-- Header strip -->
+  <div class="absolute top-16 left-0 right-0 z-[80] pointer-events-none" style="padding:16px 16px 0 16px">
+    <div class="flex items-start justify-between gap-3 flex-wrap">
+      <div class="pointer-events-auto">
+        <h1 class="text-lg font-display font-extrabold text-white flex items-center gap-2">
+          <span class="mat-icon" style="color:#b8a2ff">hub</span>
+          인물 관계도
+        </h1>
+        <p class="text-xs mt-1" style="color:#9e9aaa" id="graph-stats">-</p>
+      </div>
+      <div class="flex items-center gap-2 pointer-events-auto">
+        <button class="ctrl-btn active" id="btn-labels" onclick="toggleLabels()"><span class="mat-icon text-sm">label</span>관계 라벨</button>
+        <button class="ctrl-btn" onclick="reheat()"><span class="mat-icon text-sm">restart_alt</span>재배치</button>
+        <a href="characters.html" class="ctrl-btn" style="text-decoration:none"><span class="mat-icon text-sm">person_add</span>인물 관리</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Graph -->
+  <div id="graph-wrap">
+    <svg id="graph-svg">
+      <defs>
+        <radialGradient id="bg-glow" cx="50%" cy="45%" r="60%">
+          <stop offset="0%" stop-color="rgba(124,80,255,0.06)"/>
+          <stop offset="100%" stop-color="rgba(124,80,255,0)"/>
+        </radialGradient>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#bg-glow)"/>
+      <g id="edges-layer"></g>
+      <g id="labels-layer"></g>
+      <g id="nodes-layer"></g>
+    </svg>
+  </div>
+
+  <!-- Empty state -->
+  <div id="empty-state" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center px-6" style="z-index:90">
+    <span class="mat-icon mb-3" style="font-size:52px;color:#5e5b68">hub</span>
+    <p class="text-base font-semibold" style="color:#9e9aaa">아직 그릴 관계가 없습니다</p>
+    <p class="text-sm mt-1 mb-5 leading-relaxed" style="color:#5e5b68">캐릭터 DB에서 인물을 만들고 "인물 관계"를 추가하면<br/>이곳에 관계도가 자동으로 그려집니다.</p>
+    <a href="characters.html" class="text-sm font-semibold rounded-xl px-5 py-2.5 text-white" style="background:#7c50ff;text-decoration:none">캐릭터 만들러 가기</a>
+  </div>
+</main>
+
+<!-- LEGEND -->
+<div class="legend text-xs" id="legend">
+  <p class="uppercase tracking-wider mb-2" style="color:#5e5b68;font-size:10px">친밀도</p>
+  <div class="flex items-center gap-2 mb-1.5">
+    <svg width="36" height="8"><line x1="0" y1="4" x2="36" y2="4" stroke="#b8a2ff" stroke-width="4" stroke-linecap="round"/></svg>
+    <span style="color:#9e9aaa">높음 — 굵고 밝은 선, 가까이 배치</span>
+  </div>
+  <div class="flex items-center gap-2 mb-1.5">
+    <svg width="36" height="8"><line x1="0" y1="4" x2="36" y2="4" stroke="rgba(184,162,255,0.35)" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span style="color:#9e9aaa">낮음 — 얇은 선, 멀리 배치</span>
+  </div>
+  <div class="flex items-center gap-2">
+    <svg width="36" height="8"><line x1="0" y1="4" x2="36" y2="4" stroke="#e8587a" stroke-width="2.5" stroke-dasharray="4 3" stroke-linecap="round"/></svg>
+    <span style="color:#9e9aaa">적대 관계 (친밀도 30 미만)</span>
+  </div>
+  <div class="flex items-center gap-2 mt-2 pt-2" style="border-top:1px solid rgba(184,162,255,0.08)">
+    <svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="none" stroke="#5e5b68" stroke-width="1.5" stroke-dasharray="3 2"/></svg>
+    <span style="color:#9e9aaa">DB에 미등록된 인물 (등록 필요!)</span>
+  </div>
+</div>
+
+<!-- INFO PANEL -->
+<div class="info-panel" id="info-panel">
+  <div class="flex items-center justify-between px-4 py-3" style="border-bottom:1px solid rgba(184,162,255,0.08)">
+    <h2 class="font-display font-bold text-white text-sm">인물 정보</h2>
+    <button onclick="deselect()" class="mat-icon text-lg nav-link">close</button>
+  </div>
+  <div id="info-content" class="p-4"></div>
+</div>
+
+<!-- MOBILE NAV -->
+<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-[90] h-16 flex items-center justify-around" style="background:rgba(9,9,13,0.95);border-top:1px solid rgba(184,162,255,0.08)">
+  <a href="index.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">dashboard</span><span style="font-size:10px">홈</span></a>
+  <a href="characters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">group</span><span style="font-size:10px">캐릭터</span></a>
+  <a href="relations.html" class="flex flex-col items-center gap-1" style="color:#b8a2ff"><span class="mat-icon text-xl">hub</span><span style="font-size:10px">관계도</span></a>
+  <a href="chapters.html" class="flex flex-col items-center gap-1 nav-link"><span class="mat-icon text-xl">auto_stories</span><span style="font-size:10px">챕터</span></a>
+</nav>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  데이터 로드 — characters.html과 동일한 localStorage 키 공유
+// ═══════════════════════════════════════════════════════════
+const ROLE_TEXT = { '주인공':'#b8a2ff','히로인':'#c490ff','조력자':'#40d0a8','빌런':'#ff9bbf','조연':'#9e9aaa','단역':'#5e5b68' };
+
+function charsStorageKey() {
+  return 'sv_chars_' + (localStorage.getItem('sv_activeWork') || 'default');
+}
+function loadChars() {
+  try {
+    const raw = localStorage.getItem(charsStorageKey());
+    if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) return arr; }
+  } catch(e) {}
+  // characters.html의 데모 데이터와 동일 (첫 방문자용)
+  return [
+    { id:'demo1', name:'이현준', role:'주인공', color:'#7c50ff', relations:[{name:'서이안',type:'히로인',closeness:75},{name:'강민혁',type:'앙숙',closeness:12}] },
+    { id:'demo2', name:'서이안', role:'히로인', color:'#9d60f0', relations:[{name:'이현준',type:'주인공',closeness:78}] },
+    { id:'demo3', name:'강민혁', role:'빌런', color:'#e8587a', relations:[{name:'이현준',type:'앙숙',closeness:12}] },
+    { id:'demo4', name:'유이나', role:'조력자', color:'#20b090', relations:[{name:'이현준',type:'동료',closeness:62},{name:'서이안',type:'친구',closeness:55}] },
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════
+//  그래프 데이터 구성 — 노드(인물) + 엣지(관계, 양방향 병합)
+// ═══════════════════════════════════════════════════════════
+let nodes = [], edges = [], nodeById = {};
+let selectedId = null, showLabels = true;
+
+function buildGraph() {
+  const chars = loadChars();
+  nodes = []; edges = []; nodeById = {};
+
+  chars.forEach(c => {
+    const n = { id:c.id, name:c.name, role:c.role||'', color:c.color||'#7c50ff', avatar:c.avatar||null, ghost:false, char:c,
+                x:0, y:0, vx:0, vy:0, fx:null, fy:null };
+    nodes.push(n); nodeById[c.name] = n;
+  });
+
+  // 관계에 등장하지만 DB에 없는 이름 → 고스트 노드 (미등록 인물 경고)
+  chars.forEach(c => (c.relations||[]).forEach(r => {
+    if (r.name && !nodeById[r.name]) {
+      const g = { id:'ghost-'+r.name, name:r.name, role:'미등록', color:'#5e5b68', ghost:true, char:null,
+                  x:0, y:0, vx:0, vy:0, fx:null, fy:null };
+      nodes.push(g); nodeById[r.name] = g;
+    }
+  }));
+
+  // 양방향 관계 병합: A→B, B→A를 하나의 엣지로 (타입은 합치고 친밀도는 평균)
+  const edgeMap = {};
+  chars.forEach(c => (c.relations||[]).forEach(r => {
+    if (!r.name || !nodeById[r.name]) return;
+    const a = nodeById[c.name], b = nodeById[r.name];
+    if (!a || !b || a === b) return;
+    const key = [a.id, b.id].sort().join('|');
+    if (!edgeMap[key]) edgeMap[key] = { a, b, types:[], closenessVals:[] };
+    if (r.type && !edgeMap[key].types.includes(r.type)) edgeMap[key].types.push(r.type);
+    if (r.closeness != null) edgeMap[key].closenessVals.push(r.closeness);
+  }));
+  edges = Object.values(edgeMap).map(e => ({
+    a:e.a, b:e.b,
+    type: e.types.join(' · '),
+    closeness: e.closenessVals.length ? Math.round(e.closenessVals.reduce((s,v)=>s+v,0)/e.closenessVals.length) : 50,
+  }));
+
+  // 초기 배치: 원형
+  const W = svgW(), H = svgH();
+  const R = Math.min(W,H)/3.2;
+  nodes.forEach((n,i) => {
+    const ang = (i/nodes.length)*Math.PI*2 - Math.PI/2;
+    n.x = W/2 + Math.cos(ang)*R + (Math.random()-0.5)*20;
+    n.y = H/2 + Math.sin(ang)*R + (Math.random()-0.5)*20;
+  });
+
+  // 통계
+  const real = nodes.filter(n=>!n.ghost).length;
+  const ghosts = nodes.length - real;
+  const avgCl = edges.length ? Math.round(edges.reduce((s,e)=>s+e.closeness,0)/edges.length) : 0;
+  document.getElementById('graph-stats').textContent =
+    `인물 ${real}명 · 관계 ${edges.length}개 · 평균 친밀도 ${avgCl}` + (ghosts ? ` · ⚠ 미등록 인물 ${ghosts}명` : '');
+
+  document.getElementById('empty-state').classList.toggle('hidden', nodes.length > 0);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  포스 시뮬레이션 (외부 라이브러리 없이 직접 구현)
+//  친밀도가 높을수록 스프링 목표 거리가 짧아짐 → 가깝게 배치
+// ═══════════════════════════════════════════════════════════
+let alpha = 1;
+function svgW(){ return document.getElementById('graph-svg').clientWidth || 800; }
+function svgH(){ return document.getElementById('graph-svg').clientHeight || 600; }
+
+function tick() {
+  const W = svgW(), H = svgH();
+  const cx = W/2, cy = H/2 + 20;
+
+  // 반발력 (모든 노드 쌍)
+  for (let i=0;i<nodes.length;i++) for (let j=i+1;j<nodes.length;j++) {
+    const a = nodes[i], b = nodes[j];
+    let dx = b.x-a.x, dy = b.y-a.y;
+    let d2 = dx*dx+dy*dy || 1;
+    const d = Math.sqrt(d2);
+    const rep = 5200 / d2;
+    const fx = (dx/d)*rep, fy = (dy/d)*rep;
+    a.vx -= fx; a.vy -= fy; b.vx += fx; b.vy += fy;
+  }
+  // 스프링 (관계): 친밀도 100 → 110px, 0 → 300px
+  edges.forEach(e => {
+    const rest = 300 - e.closeness*1.9;
+    let dx = e.b.x-e.a.x, dy = e.b.y-e.a.y;
+    const d = Math.sqrt(dx*dx+dy*dy)||1;
+    const f = (d-rest)*0.012;
+    const fx = (dx/d)*f, fy = (dy/d)*f;
+    e.a.vx += fx; e.a.vy += fy; e.b.vx -= fx; e.b.vy -= fy;
+  });
+  // 중심 인력 + 적분
+  nodes.forEach(n => {
+    n.vx += (cx-n.x)*0.004; n.vy += (cy-n.y)*0.004;
+    if (n.fx != null) { n.x = n.fx; n.y = n.fy; n.vx = 0; n.vy = 0; return; }
+    n.vx *= 0.82; n.vy *= 0.82;
+    n.x += n.vx*alpha; n.y += n.vy*alpha;
+    n.x = Math.max(50, Math.min(W-50, n.x));
+    n.y = Math.max(90, Math.min(H-60, n.y));
+  });
+  alpha = Math.max(0.02, alpha*0.995);
+}
+
+function reheat() { alpha = 1; buildGraph(); render(); }
+function toggleLabels() {
+  showLabels = !showLabels;
+  document.getElementById('btn-labels').classList.toggle('active', showLabels);
+  document.getElementById('labels-layer').style.display = showLabels ? '' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SVG 렌더링
+// ═══════════════════════════════════════════════════════════
+const SVG_NS = 'http://www.w3.org/2000/svg';
+let edgeEls = [], labelEls = [], nodeEls = [];
+
+function el(tag, attrs) {
+  const e = document.createElementNS(SVG_NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+function render() {
+  const edgesL = document.getElementById('edges-layer');
+  const labelsL = document.getElementById('labels-layer');
+  const nodesL = document.getElementById('nodes-layer');
+  edgesL.innerHTML = ''; labelsL.innerHTML = ''; nodesL.innerHTML = '';
+  edgeEls = []; labelEls = []; nodeEls = [];
+
+  edges.forEach(e => {
+    const hostile = e.closeness < 30;
+    const line = el('line', {
+      stroke: hostile ? '#e8587a' : `rgba(184,162,255,${0.25 + e.closeness/100*0.65})`,
+      'stroke-width': 1 + e.closeness/28,
+      'stroke-linecap':'round',
+      ...(hostile ? {'stroke-dasharray':'6 4'} : {}),
+    });
+    edgesL.appendChild(line);
+    edgeEls.push({ line, e });
+
+    const label = el('text', { class:'edge-label', 'text-anchor':'middle' });
+    label.textContent = e.type ? `${e.type} · ${e.closeness}` : String(e.closeness);
+    labelsL.appendChild(label);
+    labelEls.push({ label, e });
+  });
+
+  nodes.forEach(n => {
+    const g = el('g', { class:'node-g' });
+    const r = n.ghost ? 16 : 22;
+
+    if (!n.ghost) g.appendChild(el('circle', { class:'halo', r:r+7, fill:n.color, opacity:0.13 }));
+    if (n.avatar) {
+      // 아바타 이미지: 원형 클립 + 캐릭터 색상 링
+      const clipId = 'clip-' + String(n.id).replace(/[^a-zA-Z0-9_-]/g, '');
+      const clip = el('clipPath', { id: clipId });
+      clip.appendChild(el('circle', { r }));
+      g.appendChild(clip);
+      g.appendChild(el('circle', { class:'body', r, fill:'#1a1a21' }));
+      const img = el('image', { x:-r, y:-r, width:r*2, height:r*2, 'clip-path':`url(#${clipId})`, preserveAspectRatio:'xMidYMid slice' });
+      img.setAttribute('href', n.avatar);
+      img.setAttribute('pointer-events', 'none');
+      g.appendChild(img);
+      g.appendChild(el('circle', { r, fill:'none', stroke:n.color, 'stroke-width':2 }));
+    } else {
+      const body = el('circle', {
+        class:'body', r,
+        fill: n.ghost ? 'rgba(94,91,104,0.15)' : n.color,
+        ...(n.ghost ? { stroke:'#5e5b68','stroke-width':1.5,'stroke-dasharray':'4 3' } : {}),
+      });
+      g.appendChild(body);
+      const initial = el('text', { 'text-anchor':'middle', dy:'0.35em', fill: n.ghost ? '#9e9aaa' : '#fff',
+        'font-size': n.ghost ? 11 : 14, 'font-weight':700, 'pointer-events':'none' });
+      initial.textContent = n.name[0] || '?';
+      g.appendChild(initial);
+    }
+
+    const nameT = el('text', { class:'node-name', dy: r+16 });
+    nameT.textContent = n.name;
+    g.appendChild(nameT);
+
+    const roleT = el('text', { class:'node-role', dy: r+29 });
+    roleT.textContent = n.ghost ? '⚠ 미등록' : n.role;
+    if (!n.ghost && ROLE_TEXT[n.role]) roleT.setAttribute('fill', ROLE_TEXT[n.role]);
+    if (n.ghost) roleT.setAttribute('fill', '#e8587a');
+    g.appendChild(roleT);
+
+    g.addEventListener('pointerdown', ev => startDrag(n, ev));
+    g.addEventListener('click', ev => { ev.stopPropagation(); if (!dragMoved) select(n); });
+
+    nodesL.appendChild(g);
+    nodeEls.push({ g, n });
+  });
+
+  document.getElementById('graph-svg').addEventListener('click', deselect);
+  applyDim();
+}
+
+function updatePositions() {
+  edgeEls.forEach(({line, e}) => {
+    line.setAttribute('x1', e.a.x); line.setAttribute('y1', e.a.y);
+    line.setAttribute('x2', e.b.x); line.setAttribute('y2', e.b.y);
+  });
+  labelEls.forEach(({label, e}) => {
+    label.setAttribute('x', (e.a.x+e.b.x)/2);
+    label.setAttribute('y', (e.a.y+e.b.y)/2 - 6);
+  });
+  nodeEls.forEach(({g, n}) => g.setAttribute('transform', `translate(${n.x},${n.y})`));
+}
+
+// ─── 선택/하이라이트 ─────────────────────
+function neighborsOf(n) {
+  const set = new Set([n.id]);
+  edges.forEach(e => { if (e.a.id===n.id) set.add(e.b.id); if (e.b.id===n.id) set.add(e.a.id); });
+  return set;
+}
+function applyDim() {
+  if (!selectedId) {
+    nodeEls.forEach(({g}) => { g.classList.remove('dimmed'); g.classList.add('undimmed'); });
+    edgeEls.forEach(({line}) => { line.classList.remove('dimmed'); });
+    labelEls.forEach(({label}) => { label.classList.remove('dimmed'); });
+    return;
+  }
+  const sel = nodes.find(n=>n.id===selectedId);
+  if (!sel) return;
+  const nb = neighborsOf(sel);
+  nodeEls.forEach(({g,n}) => { g.classList.toggle('dimmed', !nb.has(n.id)); });
+  edgeEls.forEach(({line,e}) => { line.classList.toggle('dimmed', !(e.a.id===selectedId||e.b.id===selectedId)); });
+  labelEls.forEach(({label,e}) => { label.classList.toggle('dimmed', !(e.a.id===selectedId||e.b.id===selectedId)); });
+}
+
+function select(n) {
+  selectedId = n.id;
+  applyDim();
+
+  const panel = document.getElementById('info-panel');
+  const content = document.getElementById('info-content');
+  const myEdges = edges.filter(e => e.a.id===n.id || e.b.id===n.id)
+    .sort((x,y)=>y.closeness-x.closeness);
+
+  const relRows = myEdges.map(e => {
+    const other = e.a.id===n.id ? e.b : e.a;
+    const hostile = e.closeness < 30;
+    return `
+    <div class="relation-row">
+      ${other.avatar
+        ? `<div class="w-7 h-7 rounded-full overflow-hidden flex-shrink-0" style="border:1.5px solid ${other.color}"><img src="${other.avatar}" alt="" style="width:100%;height:100%;object-fit:cover"/></div>`
+        : `<div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style="background:${other.ghost?'#36333f':other.color}">${other.name[0]}</div>`}
+      <div class="flex-1 min-w-0">
+        <p class="text-xs text-white font-semibold truncate">${other.name}${other.ghost?' <span style="color:#e8587a">⚠</span>':''}</p>
+        <p style="font-size:10px;color:#9e9aaa">${e.type||'관계 미정'}</p>
+      </div>
+      <div class="flex flex-col items-end gap-1 flex-shrink-0" style="width:64px">
+        <span style="font-size:10px;font-weight:700;color:${hostile?'#ff9bbf':'#b8a2ff'}">${e.closeness}</span>
+        <div class="w-full rounded-full" style="height:3px;background:rgba(255,255,255,0.08)">
+          <div class="rounded-full" style="height:3px;width:${e.closeness}%;background:${hostile?'#e8587a':'linear-gradient(90deg,#7c50ff,#b8a2ff)'}"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  content.innerHTML = `
+    <div class="flex items-center gap-3 mb-4">
+      ${n.avatar
+        ? `<div class="w-11 h-11 rounded-full overflow-hidden flex-shrink-0" style="border:2px solid ${n.color};box-shadow:0 0 16px ${n.color}50"><img src="${n.avatar}" alt="" style="width:100%;height:100%;object-fit:cover"/></div>`
+        : `<div class="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0" style="background:${n.ghost?'#36333f':n.color};box-shadow:0 0 16px ${n.ghost?'transparent':n.color+'50'}">${n.name[0]}</div>`}
+      <div class="min-w-0">
+        <p class="font-display font-bold text-white text-sm truncate">${n.name}</p>
+        <p class="text-xs" style="color:${n.ghost?'#e8587a':(ROLE_TEXT[n.role]||'#9e9aaa')}">${n.ghost?'DB에 등록되지 않은 인물':n.role}</p>
+      </div>
+    </div>
+    ${n.ghost ? `
+      <div class="p-3 rounded-xl mb-3 text-xs leading-relaxed" style="background:rgba(232,88,122,0.08);border:1px solid rgba(232,88,122,0.2);color:#ff9bbf">
+        다른 인물의 관계에 이름만 등장합니다. 설정 누락을 막으려면 캐릭터 DB에 등록하세요.
+      </div>` : ''}
+    <p class="text-xs uppercase tracking-wider mb-2" style="color:#5e5b68">관계 ${myEdges.length}개 (친밀도순)</p>
+    ${relRows || '<p class="text-xs" style="color:#5e5b68">연결된 관계가 없습니다.</p>'}
+    <a href="characters.html${n.ghost ? '' : '?edit=' + encodeURIComponent(n.id)}" class="flex items-center justify-center gap-1.5 rounded-xl py-2.5 mt-4 text-xs font-semibold"
+      style="background:rgba(124,80,255,0.15);color:#b8a2ff;text-decoration:none">
+      <span class="mat-icon text-sm">${n.ghost ? 'person_add' : 'edit'}</span>${n.ghost ? '캐릭터 DB에 등록하기' : '이 인물 바로 편집'}
+    </a>
+  `;
+  panel.classList.add('open');
+}
+
+function deselect() {
+  selectedId = null;
+  document.getElementById('info-panel').classList.remove('open');
+  applyDim();
+}
+
+// ─── 드래그 ─────────────────────
+let dragNode = null, dragMoved = false;
+function startDrag(n, ev) {
+  ev.preventDefault();
+  dragNode = n; dragMoved = false;
+  n.fx = n.x; n.fy = n.y;
+  document.getElementById('graph-svg').classList.add('dragging');
+}
+window.addEventListener('pointermove', ev => {
+  if (!dragNode) return;
+  dragMoved = true;
+  const rect = document.getElementById('graph-svg').getBoundingClientRect();
+  dragNode.fx = ev.clientX - rect.left;
+  dragNode.fy = ev.clientY - rect.top;
+  alpha = Math.max(alpha, 0.4);
+});
+window.addEventListener('pointerup', () => {
+  if (dragNode) { dragNode.fx = null; dragNode.fy = null; dragNode = null; }
+  document.getElementById('graph-svg').classList.remove('dragging');
+  setTimeout(() => { dragMoved = false; }, 50);
+});
+
+// ─── 시작 ─────────────────────
+window.addEventListener('load', () => {
+  const workName = localStorage.getItem('sv_workName') || '마법사의 귀환';
+  document.getElementById('nav-work-name').textContent = workName;
+  document.getElementById('sidebar-work-name').textContent = workName;
+
+  buildGraph();
+  render();
+  (function loop(){ tick(); updatePositions(); requestAnimationFrame(loop); })();
+});
+window.addEventListener('resize', () => { alpha = Math.max(alpha, 0.3); });
+window.addEventListener('keydown', e => { if (e.key === 'Escape') deselect(); });
+</script>
+
+</body>
+</html>

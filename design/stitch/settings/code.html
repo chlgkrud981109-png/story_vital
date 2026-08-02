@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#25252a",
+                        "tertiary-dim": "#ef77a0",
+                        "primary-container": "#a98fff",
+                        "on-background": "#f0edf1",
+                        "surface-container": "#19191d",
+                        "tertiary-container": "#fc81ab",
+                        "on-surface": "#f0edf1",
+                        "surface-dim": "#0e0e11",
+                        "inverse-on-surface": "#555458",
+                        "on-secondary-fixed-variant": "#6834a6",
+                        "secondary-container": "#5e289b",
+                        "inverse-primary": "#6834eb",
+                        "surface-tint": "#b6a0ff",
+                        "error-container": "#a70138",
+                        "outline-variant": "#48474b",
+                        "on-primary-fixed": "#000000",
+                        "error": "#ff6e84",
+                        "surface": "#0e0e11",
+                        "secondary-fixed-dim": "#d7b5ff",
+                        "outline": "#767579",
+                        "secondary": "#bc87fe",
+                        "surface-container-lowest": "#000000",
+                        "on-primary-fixed-variant": "#32008a",
+                        "surface-bright": "#2c2c30",
+                        "secondary-fixed": "#e2c7ff",
+                        "primary-dim": "#7e51ff",
+                        "on-surface-variant": "#acaaae",
+                        "on-secondary-fixed": "#4a0b87",
+                        "surface-container-highest": "#25252a",
+                        "on-tertiary-container": "#59002b",
+                        "on-error": "#490013",
+                        "tertiary-fixed-dim": "#f57ca5",
+                        "secondary-dim": "#ba85fb",
+                        "on-tertiary": "#6a0936",
+                        "on-primary-container": "#280072",
+                        "primary-fixed-dim": "#9c7eff",
+                        "inverse-surface": "#fcf8fd",
+                        "primary": "#b6a0ff",
+                        "on-tertiary-fixed-variant": "#70103b",
+                        "surface-container-high": "#1f1f23",
+                        "on-tertiary-fixed": "#380019",
+                        "tertiary": "#ff97b8",
+                        "on-secondary-container": "#e1c5ff",
+                        "tertiary-fixed": "#ff8db2",
+                        "on-primary": "#340090",
+                        "background": "#0e0e11",
+                        "surface-container-low": "#131316",
+                        "on-error-container": "#ffb2b9",
+                        "on-secondary": "#340064",
+                        "primary-fixed": "#a98fff",
+                        "error-dim": "#d73357"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(25, 25, 29, 0.7);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(126, 81, 255, 0.15);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen">
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 left-0 h-16 bg-[#0e0e11] flex items-center justify-between px-6 w-full z-40 font-['Manrope'] antialiased">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tight text-white">The Scriptorium</span>
+<nav class="hidden md:flex items-center gap-6">
+<span class="text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-95 text-sm">Dashboard</span>
+<span class="text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-95 text-sm">Library</span>
+<span class="text-[#7e51ff] font-bold cursor-pointer active:scale-95 text-sm">Settings</span>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-white">timer</span>
+<span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-white">notifications</span>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img alt="Author Profile" data-alt="Close-up portrait of a thoughtful author in a dark room with subtle purple neon backlighting on their face" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAshVqshDukbTq6cBOvnKAMZ2fOyN_MXZP-SfRw9Oj76nhT2M-3kX3fmxHJIJCrFxlaSxitDH9SARc7RCUxmaJDR5xgBqdO8ydgy6ssAcZbM2eubDBwFFy5MlruPObTweG_PQMqQfUPjIPK8iR1DyIhcXj1lFS7qts0-Wajz0wnrCW-9iuq2PwCrMu1yNDUcYdrsesGwOYc4M4J1dx3Jo3JL9xe-aJP8oAPJdqrAyrwWwPenmT264HWBuvmWz8-7p1zoUbaUscdN-g7"/>
+</div>
+</div>
+</header>
+<div class="flex pt-16 min-h-screen">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 bottom-0 w-64 h-full bg-[#131316] flex flex-col py-8 shadow-[20px_0_50px_rgba(0,0,0,0.5)] z-30 hidden lg:flex">
+<div class="px-6 mb-10 mt-8">
+<h2 class="text-white font-black text-lg">Manuscript Alpha</h2>
+<p class="text-gray-500 text-xs uppercase tracking-widest mt-1">Drafting Phase</p>
+</div>
+<nav class="flex-1 space-y-2">
+<div class="px-3">
+<div class="flex items-center gap-4 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all cursor-pointer rounded-lg group">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-['Manrope'] text-sm tracking-wide">Dashboard</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all cursor-pointer rounded-lg group">
+<span class="material-symbols-outlined">library_books</span>
+<span class="font-['Manrope'] text-sm tracking-wide">Library</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all cursor-pointer rounded-lg group">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="font-['Manrope'] text-sm tracking-wide">Chapters</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all cursor-pointer rounded-lg group">
+<span class="material-symbols-outlined">public</span>
+<span class="font-['Manrope'] text-sm tracking-wide">Worldbuilding</span>
+</div>
+</div>
+</nav>
+<div class="px-3 mt-auto border-t border-outline-variant/10 pt-4">
+<div class="flex items-center gap-4 px-4 py-3 bg-[#1f1f23] text-white border-l-2 border-[#ba85fb] transition-all cursor-pointer group">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-['Manrope'] text-sm tracking-wide">Settings</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f23] transition-all cursor-pointer rounded-lg group">
+<span class="material-symbols-outlined">help</span>
+<span class="font-['Manrope'] text-sm tracking-wide">Help</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 lg:ml-64 p-8 lg:p-12 overflow-y-auto">
+<div class="max-w-3xl mx-auto space-y-12">
+<!-- Page Header -->
+<header>
+<h1 class="text-4xl font-extrabold font-headline text-white tracking-tight">Settings</h1>
+<p class="text-on-surface-variant mt-2 text-lg">Configure your writing environment and account preferences.</p>
+</header>
+<!-- Profile Section -->
+<section class="space-y-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">person</span>
+<h3 class="text-xl font-bold font-headline text-white">Profile</h3>
+</div>
+<div class="bg-surface-container-high rounded-xl p-8 space-y-8">
+<div class="flex flex-col md:flex-row items-start md:items-center gap-8">
+<div class="relative group">
+<div class="w-24 h-24 rounded-full overflow-hidden border-2 border-primary-dim shadow-[0_0_15px_rgba(126,81,255,0.2)]">
+<img alt="Profile Avatar" class="w-full h-full object-cover" data-alt="Professional portrait of a creative writer, moody lighting with purple and blue rim light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNONSsiK1pMI_-0fxVUj2vCNjEjXMPD92j624853N2_AUMC5iUIuxVCDfOGhlDpb7Ctr_USAeHpWMv6_pjFVrFfiYOAkaHC1YJXl8ZADSoNKKImm9PwbU2jZsd98I59TQ4J65o9SVnegotFte8n8P7nHBoBRKOZZgcrUhxBL7bx15GfBud-CVw7cPECzXmx80WtRynECtJtDJU72Gysg9QXgMrQP6mIy-Ac_TB8w-F2H0Nm2gbvohkrvbacxe6nF1oIyiPaByKvsey"/>
+</div>
+<button class="absolute bottom-0 right-0 bg-primary p-2 rounded-full text-on-primary-container shadow-lg hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-sm">photo_camera</span>
+</button>
+</div>
+<div class="space-y-1">
+<h4 class="text-white font-medium">Profile Image</h4>
+<p class="text-sm text-outline">Recommended size: 400x400px. JPG or PNG.</p>
+<button class="mt-2 text-primary-dim text-sm font-medium hover:text-primary transition-colors">Upload new avatar</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-xs font-semibold text-outline tracking-wider uppercase ml-1">Display Name</label>
+<input class="w-full bg-surface-container-lowest border-none rounded-lg p-4 text-on-surface focus:ring-1 focus:ring-primary-dim focus:bg-surface-container-low transition-all" type="text" value="Julian Thorne"/>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-semibold text-outline tracking-wider uppercase ml-1">Email Address</label>
+<input class="w-full bg-surface-container-lowest border-none rounded-lg p-4 text-on-surface focus:ring-1 focus:ring-primary-dim focus:bg-surface-container-low transition-all" type="email" value="julian.thorne@scriptorium.io"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Preferences Section -->
+<section class="space-y-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">palette</span>
+<h3 class="text-xl font-bold font-headline text-white">Preferences</h3>
+</div>
+<div class="bg-surface-container-high rounded-xl p-8 space-y-10">
+<!-- Appearance -->
+<div class="flex items-center justify-between">
+<div>
+<h4 class="text-white font-medium">Appearance</h4>
+<p class="text-sm text-outline mt-1">Switch between light and dark thematic environments.</p>
+</div>
+<div class="flex bg-surface-container-lowest p-1 rounded-full border border-outline-variant/20">
+<button class="px-4 py-2 rounded-full flex items-center gap-2 text-sm text-outline hover:text-white transition-colors">
+<span class="material-symbols-outlined text-lg">light_mode</span>
+                                    Light
+                                </button>
+<button class="px-4 py-2 rounded-full flex items-center gap-2 text-sm bg-primary-dim text-white shadow-lg">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">dark_mode</span>
+                                    Dark
+                                </button>
+</div>
+</div>
+<!-- Typography Settings -->
+<div class="space-y-6">
+<h4 class="text-white font-medium">Editor Typography</h4>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="space-y-4">
+<label class="text-xs font-semibold text-outline tracking-wider uppercase">Font Family</label>
+<div class="space-y-3">
+<label class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg cursor-pointer border border-transparent hover:border-primary-dim/30 transition-all">
+<span class="font-body">Inter (Sans Serif)</span>
+<input checked="" class="text-primary-dim focus:ring-0 bg-transparent border-outline" name="font" type="radio"/>
+</label>
+<label class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg cursor-pointer border border-transparent hover:border-primary-dim/30 transition-all">
+<span class="font-serif italic">EB Garamond (Serif)</span>
+<input class="text-primary-dim focus:ring-0 bg-transparent border-outline" name="font" type="radio"/>
+</label>
+<label class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg cursor-pointer border border-transparent hover:border-primary-dim/30 transition-all">
+<span class="font-mono text-sm">JetBrains Mono (Technical)</span>
+<input class="text-primary-dim focus:ring-0 bg-transparent border-outline" name="font" type="radio"/>
+</label>
+</div>
+</div>
+<div class="space-y-8">
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<label class="text-xs font-semibold text-outline tracking-wider uppercase">Font Size</label>
+<span class="text-primary text-sm font-bold">16px</span>
+</div>
+<input class="w-full h-1 bg-surface-container-lowest rounded-lg appearance-none cursor-pointer accent-primary-dim" type="range"/>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<label class="text-xs font-semibold text-outline tracking-wider uppercase">Line Height</label>
+<span class="text-primary text-sm font-bold">1.7</span>
+</div>
+<input class="w-full h-1 bg-surface-container-lowest rounded-lg appearance-none cursor-pointer accent-primary-dim" max="2.5" min="1" step="0.1" type="range" value="1.7"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Subscription Section -->
+<section class="space-y-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">workspace_premium</span>
+<h3 class="text-xl font-bold font-headline text-white">Subscription</h3>
+</div>
+<div class="bg-surface-container-high rounded-xl p-8 border border-primary-dim/10 relative overflow-hidden">
+<!-- Decorative glow -->
+<div class="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 blur-[80px] rounded-full"></div>
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+<div>
+<div class="flex items-center gap-3">
+<h4 class="text-white text-2xl font-bold">Manuscript Pro</h4>
+<span class="px-3 py-1 bg-primary-container text-on-primary-container text-[10px] font-black uppercase tracking-tighter rounded-full">Active</span>
+</div>
+<p class="text-on-surface-variant mt-2">Unlimited manuscripts, character vaults, and cloud sync.</p>
+<p class="text-sm text-outline mt-4">Renews on <span class="text-white font-medium">October 14, 2024</span></p>
+</div>
+<div class="text-right flex flex-col items-end gap-3">
+<div class="text-3xl font-black text-white">$12.00<span class="text-sm font-medium text-outline">/mo</span></div>
+<button class="bg-surface-container-lowest hover:bg-surface-container-highest text-white px-6 py-3 rounded-lg text-sm font-bold transition-all border border-outline-variant/30">
+                                    Manage Billing
+                                </button>
+</div>
+</div>
+<div class="mt-10 pt-8 border-t border-outline-variant/10 flex flex-wrap gap-x-8 gap-y-4">
+<div class="flex items-center gap-2 text-sm text-outline">
+<span class="material-symbols-outlined text-tertiary-fixed text-base">check_circle</span>
+                                Unlimited Projects
+                            </div>
+<div class="flex items-center gap-2 text-sm text-outline">
+<span class="material-symbols-outlined text-tertiary-fixed text-base">check_circle</span>
+                                AI Plot Analysis
+                            </div>
+<div class="flex items-center gap-2 text-sm text-outline">
+<span class="material-symbols-outlined text-tertiary-fixed text-base">check_circle</span>
+                                50GB Cloud Storage
+                            </div>
+</div>
+</div>
+</section>
+<!-- Danger Zone -->
+<section class="pt-8 space-y-4">
+<div class="p-6 border border-error-dim/20 rounded-xl bg-error-container/5 flex items-center justify-between">
+<div>
+<h4 class="text-error font-bold">Delete Account</h4>
+<p class="text-sm text-error/60">Permanently remove all your manuscripts and data. This cannot be undone.</p>
+</div>
+<button class="text-error border border-error/20 px-4 py-2 rounded-lg text-sm font-medium hover:bg-error/10 transition-colors">
+                            Close Account
+                        </button>
+</div>
+</section>
+<!-- Footer Actions -->
+<footer class="pt-12 pb-24 flex justify-end gap-4">
+<button class="px-8 py-4 rounded-lg text-on-surface hover:text-white transition-colors font-bold">
+                        Discard Changes
+                    </button>
+<button class="bg-primary-dim hover:shadow-[0_0_12px_#7e51ff] text-white px-10 py-4 rounded-lg font-bold transition-all active:scale-95">
+                        Save Preferences
+                    </button>
+</footer>
+</div>
+</main>
+</div>
+<!-- Mobile Navigation Shell (Suppressed as per rules, using BottomNavBar for mobile context) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#131316] flex items-center justify-around z-50 border-t border-outline-variant/10">
+<span class="material-symbols-outlined text-gray-500">dashboard</span>
+<span class="material-symbols-outlined text-gray-500">library_books</span>
+<span class="material-symbols-outlined text-[#7e51ff]" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="material-symbols-outlined text-gray-500">public</span>
+</nav>
+</body></html>
