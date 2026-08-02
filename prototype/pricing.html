@@ -105,8 +105,8 @@
         <div class="check-item"><span class="icon icon-sm" style="color:var(--success);flex-shrink:0">check_circle</span><span style="font-size:13px;color:var(--t2)">클라우드 자동 백업</span></div>
         <div class="check-item"><span class="icon icon-sm" style="color:var(--success);flex-shrink:0">check_circle</span><span style="font-size:13px;color:var(--t2)">우선 고객 지원</span></div>
       </div>
-      <button onclick="startPayment('pro')" class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;font-size:15px" id="pro-btn">
-        Pro 시작하기
+      <button onclick="comingSoon()" class="btn" style="width:100%;justify-content:center;padding:13px;font-size:15px;background:rgba(123,79,255,0.12);color:var(--t3);border:1px solid var(--b1);cursor:default" id="pro-btn">
+        출시 준비 중
       </button>
       <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--t3)">신용카드 · 계좌이체 · 카카오페이 · 토스페이</div>
     </div>
@@ -214,12 +214,12 @@ window.setBilling = (cycle) => {
     document.getElementById('pro-price').textContent = '₩48,000';
     document.getElementById('pro-period').textContent = '/ 년';
     document.getElementById('pro-sub').textContent = '연간 구독 (월 ₩4,000) · 2개월 무료';
-    document.getElementById('pro-btn').textContent = 'Pro 연간 시작하기';
+    document.getElementById('pro-btn').textContent = '출시 준비 중';
   } else {
     document.getElementById('pro-price').textContent = '₩4,900';
     document.getElementById('pro-period').textContent = '/ 월';
     document.getElementById('pro-sub').textContent = '월간 구독 · 언제든 취소';
-    document.getElementById('pro-btn').textContent = 'Pro 시작하기';
+    document.getElementById('pro-btn').textContent = '출시 준비 중';
   }
 };
 
@@ -295,6 +295,8 @@ function showPayOverlay(show) {
 }
 
 // ─── FAQ ─────────────────────────────────────────────────
+window.comingSoon = () => toast('결제 기능은 출시 준비 중입니다. 지금은 모든 기능을 무료로 이용하실 수 있어요!', 'info');
+
 window.toggleFaq = (id) => {
   const a = document.getElementById(id+'-a');
   const icon = document.getElementById(id+'-icon');

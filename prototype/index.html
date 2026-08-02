@@ -36,6 +36,15 @@
 </style>
 </head>
 <body>
+<script>/* 로그인 상태면 auth 화면을 그리기 전에 숨김 — 깜빡임 방지 */
+if(localStorage.getItem('sv_user'))document.documentElement.classList.add('sv-authed');</script>
+<style>
+.sv-authed #auth{display:none!important}
+#boot-loader{display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center}
+.sv-authed #boot-loader{display:flex}
+@keyframes bootSpin{to{transform:rotate(360deg)}}
+</style>
+<div id="boot-loader"><div style="width:26px;height:26px;border-radius:50%;border:3px solid rgba(123,79,255,0.2);border-top-color:#7b4fff;animation:bootSpin 0.8s linear infinite"></div></div>
 <div id="toast-container"></div>
 
 <!-- AUTH -->
@@ -474,9 +483,11 @@ window.doGoogleSignIn = async()=>{
   catch(e){ g.innerHTML=orig; toast('\ub85c\uadf8\uc778 \uc2e4\ud328: '+(e.message||e.code||''),'error'); }
 };
 window.doSignOut = async()=>{ if(!confirm('로그아웃할까요? 데이터는 이 브라우저에 안전하게 남아있어요.'))return; localStorage.removeItem('sv_user'); try{if(FB)await FB.signOutUser();}catch(e){} location.reload(); };
-function showAuth(){ document.getElementById('auth').style.display='flex'; document.getElementById('ob').style.display='none'; document.getElementById('app').style.display='none'; }
-function showOb(user){ document.getElementById('auth').style.display='none'; document.getElementById('ob').style.display='flex'; document.getElementById('app').style.display='none'; }
+function showAuth(){ document.documentElement.classList.remove('sv-authed'); hideBootLoader(); document.getElementById('auth').style.display='flex'; document.getElementById('ob').style.display='none'; document.getElementById('app').style.display='none'; }
+function showOb(user){ hideBootLoader(); document.getElementById('auth').style.display='none'; document.getElementById('ob').style.display='flex'; document.getElementById('app').style.display='none'; }
+function hideBootLoader(){ const b=document.getElementById('boot-loader'); if(b)b.style.display='none'; }
 function showApp(user){
+  hideBootLoader();
   document.getElementById('auth').style.display='none'; document.getElementById('ob').style.display='none'; document.getElementById('app').style.display='block';
   const n=(user?.displayName||'작가').split(' ')[0];
   document.getElementById('wname').textContent=n+'님'; document.getElementById('sb-un').textContent=n;
