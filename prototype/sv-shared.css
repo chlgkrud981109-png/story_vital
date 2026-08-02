@@ -11,7 +11,7 @@ html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 body {
   background: #08080c;
   color: #e8e4f2;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Manrope', 'Pretendard Variable', Pretendard, sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
 }
@@ -132,7 +132,7 @@ select.field option { background: var(--s3); color: var(--t1); }
   font-weight: 600;
   transition: all 0.18s var(--ease);
   white-space: nowrap;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Manrope', 'Pretendard Variable', Pretendard, sans-serif;
 }
 .btn:active { transform: scale(0.97); }
 .btn-primary {
