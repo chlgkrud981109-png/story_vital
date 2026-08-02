@@ -472,6 +472,7 @@ if (FB && FB.isConfigured) try { FB.onAuth(async user => {
       const saved = localStorage.getItem('sv_aw_'+user.uid);
       S.activeId = saved && works.find(w=>w.id===saved) ? saved : works[0]?.id;
       if (!works.length) { showOb(user); return; }
+      setActiveWork(S.activeId); // 다른 페이지(캐릭터/관계도/챕터/내보내기)가 읽는 sv_activeWork·sv_workName 동기화
       if (sub.plan==='pro') document.getElementById('upbtn').style.display='none';
       const [chars, chapters, threads, stats] = await Promise.all([FB.getCharacters(user.uid, S.activeId), FB.getChapters(user.uid, S.activeId), FB.getThreads(user.uid, S.activeId), FB.getStats(user.uid)]);
       S.chars=chars; S.chapters=chapters; S.threads=threads; S.stats=stats;
