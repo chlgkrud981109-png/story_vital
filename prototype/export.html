@@ -108,7 +108,7 @@ textarea.inp{font-family:'Noto Serif KR',serif;line-height:1.85;resize:none}
       <span class="mat-icon text-sm" style="color:#b8a2ff;font-size:15px">book</span>
       <span class="text-white font-semibold text-xs" id="nav-work-name">마법사의 귀환</span>
     </div>
-    <img src="https://api.dicebear.com/7.x/initials/svg?seed=작가&backgroundColor=7c50ff" alt="" class="w-8 h-8 rounded-full object-cover" style="border:1px solid rgba(124,80,255,0.4)"/>
+    <img id="user-avatar" src="https://api.dicebear.com/7.x/initials/svg?seed=작가&backgroundColor=7c50ff" alt="" class="w-8 h-8 rounded-full object-cover" style="border:1px solid rgba(124,80,255,0.4)"/>
   </div>
 </nav>
 
@@ -125,6 +125,11 @@ textarea.inp{font-family:'Noto Serif KR',serif;line-height:1.85;resize:none}
     <a href="chapters.html" class="sidebar-item"><span class="mat-icon text-lg">format_list_bulleted</span>챕터 트래커</a>
     <a href="export.html" class="sidebar-item sidebar-active"><span class="mat-icon text-lg">upload_file</span>내보내기</a>
   </nav>
+  <div class="px-2 pb-1">
+    <a href="pricing.html" class="sidebar-item" style="color:#b8a2ff"><span class="mat-icon text-lg">star</span>Pro 업그레이드</a>
+    <button onclick="svLogout()" class="sidebar-item" style="width:100%;background:none;border:none">
+      <span class="mat-icon text-lg">logout</span>로그아웃</button>
+  </div>
 </aside>
 
 <!-- MAIN -->
@@ -879,5 +884,27 @@ window.setTab = function(tab) {
 };
 </script>
 
+
+<script>
+// ─── 네비 동기화 (전 페이지 공통): 로그인 사용자 아바타 + 현재 작품명 ───
+(function(){
+  try{
+    const u=JSON.parse(localStorage.getItem('sv_user')||'null');
+    const img=document.getElementById('user-avatar');
+    if(u&&img){
+      img.src=u.photo||('https://api.dicebear.com/7.x/initials/svg?seed='+encodeURIComponent(u.name||'작가')+'&backgroundColor=7c50ff');
+      img.title=u.name||''; img.referrerPolicy='no-referrer';
+    }
+    const wn=localStorage.getItem('sv_workName');
+    if(wn)['nav-work-name','sidebar-work-name'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=wn;});
+  }catch(e){}
+})();
+window.svLogout=function(){
+  if(!confirm('로그아웃할까요? 데이터는 이 브라우저에 남아있어요.'))return;
+  localStorage.setItem('sv_signout','1');
+  localStorage.removeItem('sv_user');
+  location.href='index.html';
+};
+</script>
 </body>
 </html>
